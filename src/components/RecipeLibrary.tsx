@@ -1,251 +1,263 @@
-
 import React, { useState } from 'react';
-import { ArrowLeft, Clock, Users, Star } from 'lucide-react';
+import { ArrowLeftIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { User } from '@/types';
+import { Card, CardContent } from './ui/Card';
+import Header from './Header';
+
+interface RecipeLibraryProps {
+  onBack: () => void;
+  user: User;
+  onProfileClick: () => void;
+}
 
 interface Recipe {
   id: number;
   name: string;
-  time: string;
-  servings: string;
-  difficulty: string;
   category: string;
+  prepTime: string;
   image: string;
   ingredients: string[];
-  instructions: string[];
-  benefits: string;
+  description: string;
 }
 
-interface RecipeLibraryProps {
-  onBack: () => void;
-}
+const recipes: Recipe[] = [
+  {
+    id: 1,
+    name: 'Salada de Quinoa',
+    category: 'Almoço',
+    prepTime: '15 min',
+    image: '🥗',
+    ingredients: ['Quinoa', 'Tomate', 'Pepino', 'Azeite', 'Limão'],
+    description: 'Salada nutritiva rica em proteínas e vegetais frescos.'
+  },
+  {
+    id: 2,
+    name: 'Smoothie Verde',
+    category: 'Bebidas',
+    prepTime: '5 min',
+    image: '🥤',
+    ingredients: ['Espinafre', 'Banana', 'Maçã', 'Água de Coco'],
+    description: 'Bebida refrescante cheia de vitaminas e minerais.'
+  },
+  {
+    id: 3,
+    name: 'Pasta de Grão-de-bico',
+    category: 'Lanches',
+    prepTime: '10 min',
+    image: '🧆',
+    ingredients: ['Grão-de-bico', 'Tahine', 'Alho', 'Azeite', 'Limão'],
+    description: 'Ótima opção para lanches saudáveis com vegetais.'
+  },
+  {
+    id: 4,
+    name: 'Aveia com Frutas',
+    category: 'Café da Manhã',
+    prepTime: '5 min',
+    image: '🥣',
+    ingredients: ['Aveia', 'Banana', 'Mel', 'Canela', 'Nozes'],
+    description: 'Café da manhã rápido e energético para começar o dia.'
+  },
+  {
+    id: 5,
+    name: 'Sopa de Legumes',
+    category: 'Jantar',
+    prepTime: '30 min',
+    image: '🍲',
+    ingredients: ['Cenoura', 'Abobrinha', 'Cebola', 'Batata', 'Temperos'],
+    description: 'Sopa leve e nutritiva, perfeita para o jantar.'
+  },
+  {
+    id: 6,
+    name: 'Tofu Grelhado',
+    category: 'Almoço',
+    prepTime: '20 min',
+    image: '🍛',
+    ingredients: ['Tofu', 'Molho de Soja', 'Gengibre', 'Alho', 'Legumes'],
+    description: 'Prato proteico e saboroso para almoço ou jantar.'
+  }
+];
 
-const RecipeLibrary: React.FC<RecipeLibraryProps> = ({ onBack }) => {
-  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+const RecipeLibrary: React.FC<RecipeLibraryProps> = ({ onBack, user, onProfileClick }) => {
   const [selectedCategory, setSelectedCategory] = useState('Todas');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
 
-  const recipes: Recipe[] = [
-    {
-      id: 1,
-      name: 'Suco Verde Detox',
-      time: '5min',
-      servings: '1 pessoa',
-      difficulty: 'Fácil',
-      category: 'Detox',
-      image: '🥬',
-      ingredients: ['1 folha couve', '1/2 maçã', '1/2 limão', '200ml água'],
-      instructions: ['Lave bem a couve', 'Corte a maçã', 'Bata tudo no liquidificador', 'Coe e sirva'],
-      benefits: 'Rico em vitaminas e minerais, ajuda na digestão'
-    },
-    {
-      id: 2,
-      name: 'Salada Anti-inflamatória',
-      time: '10min',
-      servings: '2 pessoas',
-      difficulty: 'Fácil',
-      category: 'Saladas',
-      image: '🥗',
-      ingredients: ['2 xíc rúcula', '1/2 abacate', '1 tomate', 'azeite', 'limão'],
-      instructions: ['Lave a rúcula', 'Corte o abacate e tomate', 'Misture tudo', 'Tempere com azeite e limão'],
-      benefits: 'Reduz inflamação, rica em ômega-3'
-    },
-    {
-      id: 3,
-      name: 'Chá de Gengibre',
-      time: '8min',
-      servings: '1 pessoa',
-      difficulty: 'Fácil',
-      category: 'Bebidas',
-      image: '🫖',
-      ingredients: ['1 pedaço gengibre', '1 xíc água', 'mel a gosto'],
-      instructions: ['Ferva a água', 'Adicione o gengibre', 'Deixe em infusão 5min', 'Adoce com mel'],
-      benefits: 'Anti-inflamatório natural, melhora digestão'
-    },
-    {
-      id: 4,
-      name: 'Smoothie Energético',
-      time: '5min',
-      servings: '1 pessoa',
-      difficulty: 'Fácil',
-      category: 'Bebidas',
-      image: '🥤',
-      ingredients: ['1 banana', '1/2 xíc aveia', '200ml leite vegetal', '1 col mel'],
-      instructions: ['Adicione tudo no liquidificador', 'Bata bem', 'Sirva gelado'],
-      benefits: 'Energia natural, rico em fibras'
-    },
-    {
-      id: 5,
-      name: 'Sopa Detox de Legumes',
-      time: '25min',
-      servings: '4 pessoas',
-      difficulty: 'Médio',
-      category: 'Sopas',
-      image: '🍲',
-      ingredients: ['2 cenouras', '1 abobrinha', '1 chuchu', 'temperos naturais'],
-      instructions: ['Corte os legumes', 'Refogue com pouco óleo', 'Adicione água', 'Cozinhe até ficar macio'],
-      benefits: 'Baixa caloria, rica em nutrientes'
-    }
-  ];
-
-  // Gerar mais 25 receitas mockup
-  const generateMockRecipes = () => {
-    const mockRecipes = [];
-    const categories = ['Detox', 'Saladas', 'Bebidas', 'Sopas', 'Lanches'];
-    const names = [
-      'Vitamina de Frutas Vermelhas', 'Salada de Quinoa', 'Água Saborizada', 'Creme de Abóbora',
-      'Sanduíche Natural', 'Suco de Beterraba', 'Salada Mediterrânea', 'Chá de Camomila',
-      'Sopa de Lentilha', 'Wrap Integral', 'Smoothie Verde', 'Salada de Grão de Bico',
-      'Água com Limão', 'Canja Light', 'Tapioca Funcional', 'Suco de Cenoura',
-      'Salada Caesar Light', 'Chá Verde', 'Gazpacho', 'Pão Integral', 'Vitamina Detox',
-      'Salada Tropical', 'Kombucha', 'Caldo Verde', 'Granola Caseira'
-    ];
-
-    for (let i = 0; i < 25; i++) {
-      mockRecipes.push({
-        id: i + 6,
-        name: names[i],
-        time: `${Math.floor(Math.random() * 20) + 5}min`,
-        servings: `${Math.floor(Math.random() * 4) + 1} pessoa${Math.floor(Math.random() * 4) + 1 > 1 ? 's' : ''}`,
-        difficulty: Math.random() > 0.5 ? 'Fácil' : 'Médio',
-        category: categories[Math.floor(Math.random() * categories.length)],
-        image: '🥗',
-        ingredients: ['Ingrediente 1', 'Ingrediente 2', 'Ingrediente 3'],
-        instructions: ['Passo 1', 'Passo 2', 'Passo 3'],
-        benefits: 'Benefícios para a saúde'
-      });
-    }
-    return mockRecipes;
-  };
-
-  const allRecipes = [...recipes, ...generateMockRecipes()];
-  const categories = ['Todas', 'Detox', 'Saladas', 'Bebidas', 'Sopas', 'Lanches'];
-
-  const filteredRecipes = selectedCategory === 'Todas' 
-    ? allRecipes 
-    : allRecipes.filter(recipe => recipe.category === selectedCategory);
+  const categories = ['Todas', 'Café da Manhã', 'Almoço', 'Jantar', 'Lanches', 'Bebidas'];
+  
+  const filteredRecipes = recipes.filter(recipe => {
+    const matchesCategory = selectedCategory === 'Todas' || recipe.category === selectedCategory;
+    const matchesSearch = recipe.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         recipe.ingredients.some(ingredient => ingredient.toLowerCase().includes(searchTerm.toLowerCase()));
+    return matchesCategory && matchesSearch;
+  });
 
   if (selectedRecipe) {
     return (
-      <div className="p-4 pb-24 max-w-md mx-auto">
-        <div className="flex items-center mb-6">
-          <button
-            onClick={() => setSelectedRecipe(null)}
-            className="mr-4 p-2 hover:bg-white/50 rounded-full transition-colors"
-          >
-            <ArrowLeft size={24} className="text-purple-700" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-purple-900">{selectedRecipe.name}</h1>
-            <p className="text-purple-600">{selectedRecipe.category}</p>
+      <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white pb-20">
+        <Header 
+          user={user}
+          onProfileClick={onProfileClick}
+          title={selectedRecipe.name}
+          showBackButton
+          onBackClick={() => setSelectedRecipe(null)}
+        />
+        
+        <div className="px-4 max-w-md mx-auto">
+          <div className="flex justify-center mb-6">
+            <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-teal-500 rounded-2xl flex items-center justify-center text-4xl text-white">
+              {selectedRecipe.image}
+            </div>
           </div>
-        </div>
-
-        <div className="gradient-card rounded-2xl p-5 mb-6 shadow-lg">
-          <div className="text-6xl text-center mb-4">{selectedRecipe.image}</div>
           
-          <div className="flex justify-around mb-6">
-            <div className="text-center">
-              <Clock className="w-5 h-5 mx-auto mb-1 text-purple-600" />
-              <p className="text-sm text-purple-900">{selectedRecipe.time}</p>
-            </div>
-            <div className="text-center">
-              <Users className="w-5 h-5 mx-auto mb-1 text-purple-600" />
-              <p className="text-sm text-purple-900">{selectedRecipe.servings}</p>
-            </div>
-            <div className="text-center">
-              <Star className="w-5 h-5 mx-auto mb-1 text-purple-600" />
-              <p className="text-sm text-purple-900">{selectedRecipe.difficulty}</p>
-            </div>
-          </div>
-
-          <div className="bg-purple-50 rounded-xl p-4 mb-4">
-            <p className="text-sm text-purple-700">{selectedRecipe.benefits}</p>
-          </div>
-        </div>
-
-        <div className="gradient-card rounded-2xl p-5 mb-6 shadow-lg">
-          <h3 className="font-semibold text-purple-900 mb-3">🛒 Ingredientes</h3>
-          <ul className="space-y-2">
-            {selectedRecipe.ingredients.map((ingredient, index) => (
-              <li key={index} className="flex items-center text-purple-800">
-                <span className="w-2 h-2 bg-purple-400 rounded-full mr-3"></span>
-                {ingredient}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="gradient-card rounded-2xl p-5 shadow-lg">
-          <h3 className="font-semibold text-purple-900 mb-3">👩‍🍳 Modo de Preparo</h3>
-          <ol className="space-y-3">
-            {selectedRecipe.instructions.map((instruction, index) => (
-              <li key={index} className="flex items-start text-purple-800">
-                <span className="bg-purple-400 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center mr-3 mt-0.5 font-bold">
-                  {index + 1}
+          <Card variant="default" size="md" className="mb-5">
+            <CardContent className="p-4">
+              <div className="flex justify-between items-center mb-4">
+                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                  {selectedRecipe.category}
                 </span>
-                {instruction}
-              </li>
-            ))}
-          </ol>
+                <span className="text-sm text-gray-600 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {selectedRecipe.prepTime}
+                </span>
+              </div>
+              
+              <p className="text-gray-700 mb-6">{selectedRecipe.description}</p>
+              
+              <h3 className="font-medium text-gray-900 mb-3">Ingredientes</h3>
+              <ul className="space-y-2 mb-6">
+                {selectedRecipe.ingredients.map((ingredient, index) => (
+                  <li key={index} className="flex items-center">
+                    <span className="mr-2 text-green-600">•</span>
+                    <span className="text-gray-700">{ingredient}</span>
+                  </li>
+                ))}
+              </ul>
+              
+              <div className="bg-yellow-50 rounded-xl p-4 border border-yellow-100">
+                <h4 className="font-medium text-yellow-800 mb-2">Dica de Preparo</h4>
+                <p className="text-sm text-gray-700">
+                  Para obter o melhor sabor, use ingredientes frescos e orgânicos sempre que possível. Ajuste os temperos de acordo com sua preferência.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card variant="default" size="md">
+            <CardContent className="p-4">
+              <h3 className="font-medium text-gray-900 mb-3">Informação Nutricional</h3>
+              <div className="grid grid-cols-4 gap-2 text-center">
+                <div className="bg-gray-50 rounded-lg p-2">
+                  <p className="text-sm text-gray-500">Calorias</p>
+                  <p className="font-medium text-gray-900">250</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-2">
+                  <p className="text-sm text-gray-500">Proteínas</p>
+                  <p className="font-medium text-gray-900">12g</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-2">
+                  <p className="text-sm text-gray-500">Carbs</p>
+                  <p className="font-medium text-gray-900">30g</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-2">
+                  <p className="text-sm text-gray-500">Gorduras</p>
+                  <p className="font-medium text-gray-900">8g</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-4 pb-24 max-w-md mx-auto">
-      <div className="flex items-center mb-6">
-        <button
-          onClick={onBack}
-          className="mr-4 p-2 hover:bg-white/50 rounded-full transition-colors"
-        >
-          <ArrowLeft size={24} className="text-purple-700" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-bold text-purple-900">Receitas Saudáveis</h1>
-          <p className="text-purple-600">30 receitas nutritivas</p>
+    <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white pb-20">
+      <Header 
+        user={user}
+        onProfileClick={onProfileClick}
+        title="Receitas Saudáveis"
+        showBackButton
+        onBackClick={onBack}
+      />
+      
+      <div className="px-4 max-w-md mx-auto">
+        {/* Search Bar */}
+        <div className="relative mb-4">
+          <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+          <input
+            type="text"
+            placeholder="Buscar por receita ou ingrediente..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 bg-white/90 backdrop-blur-sm rounded-xl border border-gray-200 focus:outline-none focus:border-green-400 text-gray-700"
+          />
         </div>
-      </div>
 
-      {/* Categories */}
-      <div className="flex gap-2 mb-6 overflow-x-auto">
-        {categories.map((category) => (
-          <button
-            key={category}
-            onClick={() => setSelectedCategory(category)}
-            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-              selectedCategory === category
-                ? 'bg-purple-600 text-white'
-                : 'bg-white text-purple-600 border border-purple-200'
-            }`}
-          >
-            {category}
-          </button>
-        ))}
-      </div>
+        {/* Category Filters */}
+        <div className="flex gap-2 overflow-x-auto pb-2 mb-6 no-scrollbar">
+          {categories.map((category) => (
+            <button
+              key={category}
+              onClick={() => setSelectedCategory(category)}
+              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                selectedCategory === category
+                  ? 'bg-green-600 text-white'
+                  : 'bg-white/80 border border-gray-200 text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
 
-      {/* Recipes Grid */}
-      <div className="grid grid-cols-2 gap-4">
-        {filteredRecipes.map((recipe) => (
-          <div
-            key={recipe.id}
-            onClick={() => setSelectedRecipe(recipe)}
-            className="gradient-card rounded-xl p-4 shadow-lg cursor-pointer hover:scale-105 transition-transform"
-          >
-            <div className="text-3xl text-center mb-2">{recipe.image}</div>
-            <h3 className="font-semibold text-purple-900 text-sm mb-2 text-center line-clamp-2">
-              {recipe.name}
-            </h3>
-            <div className="flex items-center justify-between text-xs text-purple-600">
-              <span className="flex items-center gap-1">
-                <Clock size={12} />
-                {recipe.time}
-              </span>
-              <span className="bg-purple-100 px-2 py-1 rounded-full">
-                {recipe.difficulty}
-              </span>
+        {/* Recipe Cards */}
+        <div className="space-y-4">
+          {filteredRecipes.map((recipe) => (
+            <Card
+              key={recipe.id}
+              onClick={() => setSelectedRecipe(recipe)}
+              variant="default"
+              size="md"
+              hover="scale"
+              className="overflow-hidden"
+            >
+              <CardContent className="flex items-start p-4">
+                <div className={`h-16 w-16 rounded-2xl flex items-center justify-center text-3xl bg-gradient-to-r from-green-400 to-teal-500 text-white mr-4 flex-shrink-0`}>
+                  {recipe.image}
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-lg text-gray-900 mb-1">{recipe.name}</h3>
+                  <p className="text-sm text-gray-600 mb-2">{recipe.description}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                      {recipe.category}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {recipe.prepTime}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+          {filteredRecipes.length === 0 && (
+            <div className="text-center py-10">
+              <p className="text-gray-500">Nenhuma receita encontrada.</p>
+              <button 
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedCategory('Todas');
+                }}
+                className="mt-2 text-green-600 font-medium"
+              >
+                Limpar filtros
+              </button>
             </div>
-          </div>
-        ))}
+          )}
+        </div>
       </div>
     </div>
   );

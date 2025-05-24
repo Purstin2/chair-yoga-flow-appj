@@ -1,60 +1,68 @@
-
 import React, { useState } from 'react';
 import { 
   ArrowLeftIcon, 
   CameraIcon, 
   EnvelopeIcon, 
-  LockClosedIcon, 
   UserIcon, 
   PencilIcon, 
   CheckIcon, 
   XMarkIcon,
-  Cog6ToothIcon,
   BellIcon,
   ShieldCheckIcon,
   QuestionMarkCircleIcon,
-  ArrowRightOnRectangleIcon
+  TrashIcon
 } from '@heroicons/react/24/outline';
+import { User, UserProgress } from '@/types';
 
 interface ProfileScreenProps {
   onBack: () => void;
-  onLogout: () => void;
-  currentUser: any;
-  userProgress: any;
+  onResetProgress: () => void;
+  onUpdateUser: (userData: User) => void;
+  currentUser: User;
+  userProgress: UserProgress;
 }
 
-const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, onLogout, currentUser, userProgress }) => {
+const ProfileScreen: React.FC<ProfileScreenProps> = ({ 
+  onBack, 
+  onResetProgress, 
+  onUpdateUser, 
+  currentUser, 
+  userProgress 
+}) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [userInfo, setUserInfo] = useState({
-    name: currentUser?.name || 'Usuário',
-    email: currentUser?.email || 'usuario@email.com',
-    photo: currentUser?.photo || '👩‍🦳',
-    password: ''
+  const [tempUserInfo, setTempUserInfo] = useState({
+    name: currentUser.name,
+    email: currentUser.email,
+    photo: currentUser.photo,
   });
-
-  const [tempUserInfo, setTempUserInfo] = useState(userInfo);
 
   const handleEdit = () => {
     setIsEditing(true);
-    setTempUserInfo(userInfo);
+    setTempUserInfo({
+      name: currentUser.name,
+      email: currentUser.email,
+      photo: currentUser.photo,
+    });
   };
 
   const handleSave = () => {
-    setUserInfo(tempUserInfo);
-    setIsEditing(false);
-    
-    // Atualizar dados do usuário no localStorage
     const updatedUser = {
       ...currentUser,
       name: tempUserInfo.name,
       email: tempUserInfo.email,
       photo: tempUserInfo.photo
     };
-    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+    
+    onUpdateUser(updatedUser);
+    setIsEditing(false);
   };
 
   const handleCancel = () => {
-    setTempUserInfo(userInfo);
+    setTempUserInfo({
+      name: currentUser.name,
+      email: currentUser.email,
+      photo: currentUser.photo,
+    });
     setIsEditing(false);
   };
 
@@ -69,15 +77,16 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, onLogout, current
       case 'help':
         alert('Central de ajuda em desenvolvimento');
         break;
-      case 'logout':
-        if (confirm('Tem certeza que deseja sair?')) {
-          onLogout();
+      case 'reset':
+        if (confirm('Tem certeza que deseja resetar seu progresso? Esta ação não pode ser desfeita.')) {
+          onResetProgress();
+          alert('Seu progresso foi resetado com sucesso!');
         }
         break;
     }
   };
 
-  const avatarOptions = ['👩‍🦳', '👩', '👵', '🧕', '👩‍🦰', '👩‍🦱', '👩‍🦲'];
+  const avatarOptions = ['😊', '👩', '👨', '👵', '👴', '🧕', '👩‍🦰', '👩‍🦱', '👩‍🦲', '👨‍🦰', '👨‍🦱', '👨‍🦲'];
 
   return (
     <div className="p-4 pb-24 max-w-md mx-auto">
@@ -175,7 +184,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, onLogout, current
             ) : (
               <div className="flex items-center p-3 bg-gray-50 rounded-lg">
                 <UserIcon className="h-5 w-5 text-gray-600 mr-3" />
-                <span className="text-gray-900">{userInfo.name}</span>
+                <span className="text-gray-900">{currentUser.name}</span>
               </div>
             )}
           </div>
@@ -193,23 +202,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, onLogout, current
             ) : (
               <div className="flex items-center p-3 bg-gray-50 rounded-lg">
                 <EnvelopeIcon className="h-5 w-5 text-gray-600 mr-3" />
-                <span className="text-gray-900">{userInfo.email}</span>
+                <span className="text-gray-900">{currentUser.email}</span>
               </div>
             )}
           </div>
-
-          {isEditing && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Nova Senha (opcional)</label>
-              <input
-                type="password"
-                value={tempUserInfo.password}
-                onChange={(e) => setTempUserInfo({...tempUserInfo, password: e.target.value})}
-                className="w-full p-3 border border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none text-gray-900"
-                placeholder="Digite nova senha ou deixe em branco"
-              />
-            </div>
-          )}
         </div>
 
         {isEditing && (
@@ -247,8 +243,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, onLogout, current
             <div className="text-sm text-gray-700">Exercícios</div>
           </div>
           <div className="text-center p-3 bg-purple-50 rounded-xl">
-            <div className="text-2xl font-bold text-purple-600">25</div>
-            <div className="text-sm text-gray-700">Receitas</div>
+            <div className="text-2xl font-bold text-purple-600">{userProgress?.streak || 0}</div>
+            <div className="text-sm text-gray-700">Sequência</div>
           </div>
         </div>
       </div>
@@ -279,11 +275,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, onLogout, current
             <span className="text-gray-900">Ajuda e Suporte</span>
           </button>
           <button 
-            onClick={() => handleSettingClick('logout')}
+            onClick={() => handleSettingClick('reset')}
             className="w-full text-left p-3 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-3"
           >
-            <ArrowRightOnRectangleIcon className="h-5 w-5 text-red-600" />
-            <span className="text-red-600">Sair da Conta</span>
+            <TrashIcon className="h-5 w-5 text-red-600" />
+            <span className="text-red-600">Resetar Progresso</span>
           </button>
         </div>
       </div>

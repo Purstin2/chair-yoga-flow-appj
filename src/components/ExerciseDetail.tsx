@@ -1,26 +1,24 @@
-
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Clock, Target, CheckCircle, Play, Pause, Square, RotateCcw } from 'lucide-react';
-
-interface Exercise {
-  id: number;
-  name: string;
-  duration: string;
-  difficulty: string;
-  category: string;
-  targetArea: string;
-  image: string;
-  description: string;
-  benefits: string;
-  instructions: string[];
-}
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  ArrowLeftIcon, 
+  CheckIcon, 
+  PlayIcon, 
+  PauseIcon,
+  ArrowRightIcon,
+  ArrowPathIcon
+} from '@heroicons/react/24/solid';
+import { Exercise } from '@/types';
+import { formatTime } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
+import Header from './Header';
 
 interface ExerciseDetailProps {
   exercise: Exercise;
   isCompleted: boolean;
   onBack: () => void;
   onComplete: () => void;
-  userProgress: any;
+  user: any;
+  onProfileClick: () => void;
 }
 
 const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
@@ -28,251 +26,319 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
   isCompleted,
   onBack,
   onComplete,
-  userProgress
+  user,
+  onProfileClick
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [isStarted, setIsStarted] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState(parseInt(exercise.duration) * 60);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [showTimer, setShowTimer] = useState(false);
+  const [timer, setTimer] = useState(0);
+  const [totalDuration] = useState(parseInt(exercise.duration || '5') * 60);
+  const [isRunning, setIsRunning] = useState(false);
+  const [completed, setCompleted] = useState(isCompleted);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const intervalRef = useRef<number | null>(null);
+  const stepsRef = useRef<HTMLDivElement>(null);
 
-  // Timer effect
+  // Parar o timer ao desmontar o componente
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isTimerRunning && timeRemaining > 0) {
-      interval = setInterval(() => {
-        setTimeRemaining(prev => {
-          if (prev <= 1) {
-            setIsTimerRunning(false);
-            onComplete();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
+
+  // Scroll para o passo atual quando ele muda
+  useEffect(() => {
+    if (stepsRef.current) {
+      const activeStep = stepsRef.current.querySelector(`.step-${currentStep}`);
+      if (activeStep) {
+        activeStep.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
     }
-    return () => clearInterval(interval);
-  }, [isTimerRunning, timeRemaining, onComplete]);
+  }, [currentStep]);
 
-  const handleStart = () => {
-    setIsStarted(true);
-    setCurrentStep(0);
+  const startTimer = () => {
+    setIsRunning(true);
+    intervalRef.current = window.setInterval(() => {
+      setTimer(prev => {
+        if (prev >= totalDuration) {
+          clearInterval(intervalRef.current as number);
+          setIsRunning(false);
+          return totalDuration;
+        }
+        return prev + 1;
+      });
+    }, 1000);
   };
 
-  const handleStartTimer = () => {
-    setShowTimer(true);
-    setIsTimerRunning(true);
-  };
-
-  const handlePauseTimer = () => {
-    setIsTimerRunning(false);
-  };
-
-  const handleResetTimer = () => {
-    setTimeRemaining(parseInt(exercise.duration) * 60);
-    setIsTimerRunning(false);
-  };
-
-  const handleNextStep = () => {
-    if (currentStep < exercise.instructions.length - 1) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      handleStartTimer();
+  const pauseTimer = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      setIsRunning(false);
     }
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  const resetTimer = () => {
+    pauseTimer();
+    setTimer(0);
   };
 
-  const progress = ((parseInt(exercise.duration) * 60 - timeRemaining) / (parseInt(exercise.duration) * 60)) * 100;
+  const handleComplete = () => {
+    setCompleted(true);
+    setShowConfetti(true);
+    onComplete();
+    
+    // Esconder confetti após 3 segundos
+    setTimeout(() => {
+      setShowConfetti(false);
+    }, 3000);
+  };
 
-  const difficultyColor = exercise.difficulty === 'Fácil' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700';
+  const getProgress = () => {
+    return (timer / totalDuration) * 100;
+  };
+
+  const getStepProgress = () => {
+    return ((currentStep + 1) / exercise.instructions.length) * 100;
+  };
 
   return (
-    <div className="p-4 pb-24 max-w-md mx-auto">
-      {/* Header */}
-      <div className="flex items-center mb-6">
-        <button
-          onClick={onBack}
-          className="mr-4 p-2 hover:bg-white/50 rounded-full transition-colors"
-        >
-          <ArrowLeft size={24} className="text-purple-700" />
-        </button>
-        <div className="flex-1">
-          <h1 className="text-xl font-bold text-purple-900">
-            {exercise.name}
-          </h1>
-        </div>
-        {isCompleted && (
-          <CheckCircle className="text-green-500 ml-2" size={24} />
-        )}
-      </div>
+    <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white pb-20">
+      <Header 
+        user={user}
+        onProfileClick={onProfileClick}
+        title={exercise.name}
+        showBackButton
+        onBackClick={onBack}
+      />
 
-      {/* Exercise Icon */}
-      <div className="text-center mb-6">
-        <div className="w-24 h-24 gradient-primary rounded-3xl flex items-center justify-center text-4xl text-white mx-auto mb-4">
-          {exercise.image}
-        </div>
-      </div>
-
-      {/* Exercise Info */}
-      <div className="gradient-card rounded-2xl p-5 mb-6 shadow-lg">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex items-center gap-2">
-            <Clock size={16} className="text-purple-600" />
-            <span className="text-sm font-medium text-purple-600">{exercise.duration} minutos</span>
+      <div className="px-4 max-w-md mx-auto">
+        {/* Exercise Icon */}
+        <div className="flex justify-center mb-5">
+          <div className="w-20 h-20 bg-gradient-to-br from-purple-400 to-pink-400 rounded-2xl flex items-center justify-center text-4xl text-white">
+            {exercise.icon}
           </div>
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${difficultyColor}`}>
-            {exercise.difficulty}
-          </span>
-          <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-            {exercise.targetArea}
-          </span>
         </div>
-        
-        <p className="text-purple-700 mb-4 leading-relaxed">
-          {exercise.description}
-        </p>
-        
-        <div className="bg-purple-50 rounded-xl p-3">
-          <h4 className="font-semibold text-purple-900 mb-2">🎯 Benefícios:</h4>
-          <p className="text-sm text-purple-700">{exercise.benefits}</p>
-        </div>
-      </div>
 
-      {/* Timer Section */}
-      {showTimer && (
-        <div className="gradient-card rounded-2xl p-5 mb-6 shadow-lg">
-          <div className="text-center mb-4">
-            <div className="relative w-24 h-24 mx-auto mb-4">
-              <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="45"
-                  stroke="#e5e7eb"
-                  strokeWidth="8"
-                  fill="none"
-                />
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="45"
-                  stroke="url(#gradient)"
-                  strokeWidth="8"
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeDasharray={`${progress * 2.827} 282.7`}
-                  className="transition-all duration-1000"
-                />
-                <defs>
-                  <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#7432B4" />
-                    <stop offset="100%" stopColor="#9747FF" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-xl font-bold text-purple-900">
-                  {formatTime(timeRemaining)}
-                </span>
-              </div>
+        {/* Timer Section */}
+        <Card variant="default" size="md" className="mb-5">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle>Tempo</CardTitle>
+              <span className="text-gray-600 font-medium">
+                {formatTime(timer)} / {formatTime(totalDuration)}
+              </span>
             </div>
-            
-            <div className="flex justify-center gap-3">
-              {!isTimerRunning ? (
+          </CardHeader>
+          <CardContent>
+            <div className="relative w-full h-4 bg-gray-100 rounded-full mb-4 overflow-hidden">
+              <div 
+                className="absolute top-0 left-0 h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-300"
+                style={{ width: `${getProgress()}%` }}
+              />
+            </div>
+
+            <div className="flex justify-center space-x-4">
+              {!isRunning ? (
                 <button
-                  onClick={() => setIsTimerRunning(true)}
-                  className="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors"
+                  onClick={startTimer}
+                  className="bg-purple-600 text-white p-3 rounded-full hover:bg-purple-700 transition-colors shadow-md"
                 >
-                  <Play size={16} />
-                  Continuar
+                  <PlayIcon className="h-6 w-6" />
                 </button>
               ) : (
                 <button
-                  onClick={handlePauseTimer}
-                  className="flex items-center gap-2 bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-colors"
+                  onClick={pauseTimer}
+                  className="bg-gray-600 text-white p-3 rounded-full hover:bg-gray-700 transition-colors shadow-md"
                 >
-                  <Pause size={16} />
-                  Pausar
+                  <PauseIcon className="h-6 w-6" />
                 </button>
               )}
               
               <button
-                onClick={handleResetTimer}
-                className="flex items-center gap-2 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+                onClick={resetTimer}
+                className="bg-gray-200 text-gray-700 p-3 rounded-full hover:bg-gray-300 transition-colors"
               >
-                <RotateCcw size={16} />
-                Reiniciar
+                <ArrowPathIcon className="h-6 w-6" />
+              </button>
+              
+              {timer >= totalDuration && !completed && (
+                <button
+                  onClick={handleComplete}
+                  className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center shadow-md"
+                >
+                  <CheckIcon className="h-5 w-5 mr-1" />
+                  <span>Concluir Exercício</span>
+                </button>
+              )}
+              
+              {completed && (
+                <div className="bg-green-100 text-green-800 px-4 py-2 rounded-lg flex items-center">
+                  <CheckIcon className="h-5 w-5 mr-1" />
+                  <span>Exercício concluído!</span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Exercise Steps */}
+        <Card variant="default" size="md" className="mb-5">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle>Passo a Passo</CardTitle>
+              <span className="text-sm font-medium text-purple-600">
+                {currentStep + 1} / {exercise.instructions.length}
+              </span>
+            </div>
+            
+            <div className="w-full h-1.5 bg-gray-100 rounded-full mt-2">
+              <div 
+                className="h-full bg-purple-600 rounded-full transition-all duration-300"
+                style={{ width: `${getStepProgress()}%` }}
+              />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div ref={stepsRef} className="space-y-4 max-h-60 overflow-y-auto pb-2 pr-1">
+              {exercise.instructions.map((instruction, index) => (
+                <div 
+                  key={index}
+                  className={`p-4 rounded-xl border transition-all duration-300 step-${index} ${
+                    currentStep === index 
+                      ? 'bg-purple-50 border-purple-200 shadow-sm' 
+                      : index < currentStep
+                        ? 'bg-gray-50 border-gray-200 opacity-70'
+                        : 'bg-white border-gray-100'
+                  }`}
+                >
+                  <div className="flex items-start">
+                    <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center mr-3 ${
+                      index <= currentStep 
+                        ? 'bg-purple-600 text-white' 
+                        : 'bg-gray-200 text-gray-600'
+                    }`}>
+                      {index < currentStep ? (
+                        <CheckIcon className="h-3.5 w-3.5" />
+                      ) : (
+                        <span className="text-xs font-medium">{index + 1}</span>
+                      )}
+                    </div>
+                    <p className={`text-sm ${currentStep === index ? 'text-gray-900 font-medium' : 'text-gray-700'}`}>
+                      {instruction}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-between mt-5">
+              <button
+                onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
+                disabled={currentStep === 0}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  currentStep === 0 
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                    : 'bg-white border border-purple-200 text-purple-700 hover:bg-purple-50'
+                }`}
+              >
+                <span className="flex items-center">
+                  <ArrowLeftIcon className="h-4 w-4 mr-1" />
+                  Anterior
+                </span>
+              </button>
+              <button
+                onClick={() => setCurrentStep(prev => Math.min(exercise.instructions.length - 1, prev + 1))}
+                disabled={currentStep === exercise.instructions.length - 1}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  currentStep === exercise.instructions.length - 1 
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                    : 'bg-purple-600 text-white hover:bg-purple-700'
+                }`}
+              >
+                <span className="flex items-center">
+                  Próximo
+                  <ArrowRightIcon className="h-4 w-4 ml-1" />
+                </span>
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          </CardContent>
+        </Card>
 
-      {/* Exercise Instructions */}
-      {isStarted && !showTimer ? (
-        <div className="gradient-card rounded-2xl p-5 mb-6 shadow-lg">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-purple-900">Passo a Passo</h3>
-            <span className="text-sm text-purple-600">
-              {currentStep + 1} de {exercise.instructions.length}
-            </span>
-          </div>
-          
-          <div className="w-full bg-purple-100 rounded-full h-2 mb-4">
-            <div 
-              className="gradient-primary h-2 rounded-full transition-all duration-300"
-              style={{ width: `${((currentStep + 1) / exercise.instructions.length) * 100}%` }}
-            />
-          </div>
-          
-          <div className="bg-white rounded-xl p-4 mb-4 border border-purple-100">
-            <p className="text-purple-900 leading-relaxed">
-              {exercise.instructions[currentStep]}
-            </p>
-          </div>
-          
-          <button
-            onClick={handleNextStep}
-            className="w-full gradient-primary text-white py-3 rounded-xl font-medium hover:scale-105 transition-transform"
-          >
-            {currentStep < exercise.instructions.length - 1 ? 'Próximo Passo' : 'Iniciar Timer'}
-          </button>
-        </div>
-      ) : !isStarted ? (
-        <div className="gradient-card rounded-2xl p-5 mb-6 shadow-lg">
-          <h3 className="font-semibold text-purple-900 mb-4">Instruções Completas</h3>
-          <div className="space-y-3 mb-6">
-            {exercise.instructions.map((instruction, index) => (
-              <div key={index} className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 mt-0.5">
-                  {index + 1}
+        {/* Exercise Info */}
+        <Card variant="default" size="md">
+          <CardHeader>
+            <CardTitle>Sobre o exercício</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-700 mb-4">{exercise.description}</p>
+            
+            <h4 className="font-medium text-gray-900 mb-2">Benefícios:</h4>
+            <p className="text-gray-700 mb-4">{exercise.benefits}</p>
+            
+            <div className="bg-purple-50 rounded-xl p-4">
+              <h4 className="font-medium text-purple-900 mb-2">Instruções detalhadas:</h4>
+              <div className="space-y-2">
+                <div className="flex">
+                  <span className="text-purple-700 font-medium w-24">Posição:</span>
+                  <span className="text-gray-700">{exercise.detailedInstructions.position}</span>
                 </div>
-                <p className="text-purple-700 text-sm leading-relaxed">{instruction}</p>
+                <div className="flex">
+                  <span className="text-purple-700 font-medium w-24">Movimento:</span>
+                  <span className="text-gray-700">{exercise.detailedInstructions.movement}</span>
+                </div>
+                <div className="flex">
+                  <span className="text-purple-700 font-medium w-24">Respiração:</span>
+                  <span className="text-gray-700">{exercise.detailedInstructions.breathing}</span>
+                </div>
+                <div className="flex">
+                  <span className="text-purple-700 font-medium w-24">Benefício:</span>
+                  <span className="text-gray-700">{exercise.detailedInstructions.benefit}</span>
+                </div>
+                <div className="flex">
+                  <span className="text-purple-700 font-medium w-24">Cuidado:</span>
+                  <span className="text-gray-700">{exercise.detailedInstructions.caution}</span>
+                </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Confetti Effect */}
+      {showConfetti && (
+        <div className="fixed inset-0 pointer-events-none z-50">
+          <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
+            {[...Array(50)].map((_, i) => (
+              <div
+                key={i}
+                className="absolute"
+                style={{
+                  top: `${Math.random() * 100}%`,
+                  left: `${Math.random() * 100}%`,
+                  width: `${Math.random() * 10 + 5}px`,
+                  height: `${Math.random() * 10 + 5}px`,
+                  backgroundColor: `hsl(${Math.random() * 360}, 100%, 50%)`,
+                  borderRadius: '50%',
+                  animation: `fall ${Math.random() * 3 + 2}s linear forwards`,
+                }}
+              />
             ))}
           </div>
-          
-          {!isCompleted ? (
-            <button
-              onClick={handleStart}
-              className="w-full gradient-primary text-white py-4 rounded-xl font-medium text-lg hover:scale-105 transition-transform"
-            >
-              ▶️ Iniciar Exercício
-            </button>
-          ) : (
-            <div className="text-center py-4">
-              <CheckCircle className="text-green-500 mx-auto mb-2" size={32} />
-              <p className="text-green-700 font-medium">Exercício Concluído!</p>
-              <p className="text-sm text-green-600 mt-1">Parabéns! Continue assim! 🎉</p>
-            </div>
-          )}
+          <style>{`
+            @keyframes fall {
+              0% {
+                transform: translateY(-100px) rotate(0deg);
+                opacity: 1;
+              }
+              100% {
+                transform: translateY(calc(100vh + 100px)) rotate(720deg);
+                opacity: 0;
+              }
+            }
+          `}</style>
         </div>
-      ) : null}
+      )}
     </div>
   );
 };

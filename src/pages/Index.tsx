@@ -1,269 +1,211 @@
+import { useState, useEffect } from "react";
+import { User, UserProgress } from "@/types";
+import Navigation from "@/components/Navigation";
+import Dashboard from "@/components/Dashboard";
+import ProgramCalendar from "@/components/ProgramCalendar";
+import ExerciseLibrary from "@/components/ExerciseLibrary";
+import ExerciseDetail from "@/components/ExerciseDetail";
+import RecipeLibrary from "@/components/RecipeLibrary";
+import MeditationLibrary from "@/components/MeditationLibrary";
+import ProfileScreen from "@/components/ProfileScreen";
+import { exercises } from "@/data/exercises";
 
-import React, { useState, useEffect } from 'react';
-import Navigation from '../components/Navigation';
-import Dashboard from '../components/Dashboard';
-import ProgramCalendar from '../components/ProgramCalendar';
-import ExerciseDetail from '../components/ExerciseDetail';
-import ExerciseLibrary from '../components/ExerciseLibrary';
-import RecipeLibrary from '../components/RecipeLibrary';
-import MeditationLibrary from '../components/MeditationLibrary';
-import ProfileScreen from '../components/ProfileScreen';
-import LoginScreen from '../components/LoginScreen';
-import { exercises } from '../data/exercises';
+type View = 'dashboard' | 'program' | 'exercises' | 'exercise-detail' | 'recipes' | 'meditation' | 'profile';
+
+// Usuário padrão para todos
+const defaultUser: User = {
+  id: '1',
+  name: 'Usuário',
+  email: 'usuario@exemplo.com',
+  photo: '😊'
+};
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState('home');
-  const [currentView, setCurrentView] = useState('dashboard');
-  const [selectedExercise, setSelectedExercise] = useState<number | null>(null);
-  const [selectedLibraryExercise, setSelectedLibraryExercise] = useState<any | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
-
-  // Sistema de progresso real que começa zerado para novos usuários
-  const [userProgress, setUserProgress] = useState(() => {
-    const saved = localStorage.getItem('yogaChairProgress');
-    if (saved && isLoggedIn) {
-      return JSON.parse(saved);
-    }
-    return {
-      completedDays: 0,
-      totalMinutes: 0,
-      completedExercises: [],
-      currentDay: 1,
-      startDate: null,
-      dailyCheckins: {},
-    };
+  const [currentView, setCurrentView] = useState<View>('dashboard');
+  const [currentUser, setCurrentUser] = useState<User>(defaultUser);
+  const [userProgress, setUserProgress] = useState<UserProgress>({
+    completedDays: 0,
+    totalMinutes: 0,
+    completedExercises: [],
+    streak: 0,
+    achievements: [],
+    lastActive: new Date().toISOString()
   });
+  const [selectedExercise, setSelectedExercise] = useState<typeof exercises[0] | null>(null);
 
-  // Verificar login ao carregar
+  // Load progress data from localStorage on mount
   useEffect(() => {
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-      const user = JSON.parse(savedUser);
-      setCurrentUser(user);
-      setIsLoggedIn(true);
-      
-      // Carregar progresso do usuário específico
-      const userProgressKey = `yogaChairProgress_${user.email}`;
-      const savedProgress = localStorage.getItem(userProgressKey);
-      if (savedProgress) {
-        setUserProgress(JSON.parse(savedProgress));
-      }
+    const savedProgress = localStorage.getItem('userProgress');
+    
+    if (savedProgress) {
+      setUserProgress(JSON.parse(savedProgress));
     }
   }, []);
 
-  // Salvar progresso específico do usuário
+  // Check for new day and update streak
   useEffect(() => {
-    if (isLoggedIn && currentUser) {
-      const userProgressKey = `yogaChairProgress_${currentUser.email}`;
-      localStorage.setItem(userProgressKey, JSON.stringify(userProgress));
-    }
-  }, [userProgress, isLoggedIn, currentUser]);
+    const checkStreak = () => {
+      if (!userProgress.lastActive) return;
 
-  // Calcular dia atual baseado na data de início
-  useEffect(() => {
-    if (userProgress.startDate && isLoggedIn) {
-      const startDate = new Date(userProgress.startDate);
+      const lastActive = new Date(userProgress.lastActive);
       const today = new Date();
-      const diffTime = Math.abs(today.getTime() - startDate.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
-      if (diffDays !== userProgress.currentDay && diffDays <= 21) {
+      const diffTime = Math.abs(today.getTime() - lastActive.getTime());
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 1) {
+        // User returned after exactly 1 day - increment streak
         setUserProgress(prev => ({
           ...prev,
-          currentDay: diffDays
+          streak: prev.streak + 1,
+          lastActive: today.toISOString()
+        }));
+      } else if (diffDays > 1) {
+        // User missed days - reset streak
+        setUserProgress(prev => ({
+          ...prev,
+          streak: 1,
+          lastActive: today.toISOString()
+        }));
+      } else if (diffDays === 0 && today.getDate() !== lastActive.getDate()) {
+        // Same day but different day of month (after midnight)
+        setUserProgress(prev => ({
+          ...prev,
+          streak: prev.streak + 1,
+          lastActive: today.toISOString()
         }));
       }
-    }
-  }, [userProgress.startDate, isLoggedIn]);
+    };
 
-  const handleLogin = (userData: any) => {
+    checkStreak();
+
+    // Save progress to localStorage whenever it changes
+    localStorage.setItem('userProgress', JSON.stringify(userProgress));
+  }, [userProgress]);
+
+  const handleUpdateUser = (userData: User) => {
     setCurrentUser(userData);
-    setIsLoggedIn(true);
-    localStorage.setItem('currentUser', JSON.stringify(userData));
-    
-    // Inicializar progresso se for novo usuário
-    const userProgressKey = `yogaChairProgress_${userData.email}`;
-    const existingProgress = localStorage.getItem(userProgressKey);
-    
-    if (!existingProgress) {
-      const newProgress = {
-        completedDays: 0,
-        totalMinutes: 0,
-        completedExercises: [],
-        currentDay: 1,
-        startDate: new Date().toISOString(),
-        dailyCheckins: {},
-      };
-      setUserProgress(newProgress);
-      localStorage.setItem(userProgressKey, JSON.stringify(newProgress));
-    }
   };
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setCurrentUser(null);
-    localStorage.removeItem('currentUser');
-    setActiveTab('home');
-    setCurrentView('dashboard');
+  const handleResetProgress = () => {
+    setUserProgress({
+      completedDays: 0,
+      totalMinutes: 0,
+      completedExercises: [],
+      streak: 0,
+      achievements: [],
+      lastActive: new Date().toISOString()
+    });
+    localStorage.removeItem('userProgress');
   };
 
-  if (!isLoggedIn) {
-    return <LoginScreen onLogin={handleLogin} />;
-  }
-
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-    if (tab === 'home') {
-      setCurrentView('dashboard');
-    } else if (tab === 'program') {
-      setCurrentView('program');
-    } else if (tab === 'exercises') {
-      setCurrentView('exercise-library');
-    } else if (tab === 'recipes') {
-      setCurrentView('recipes');
-    } else if (tab === 'meditation') {
-      setCurrentView('meditation');
-    } else if (tab === 'profile') {
-      setCurrentView('profile');
-    }
-  };
-
-  const handleExerciseComplete = () => {
-    if (selectedExercise && !userProgress.completedExercises.includes(selectedExercise)) {
-      const exercise = exercises.find(e => e.id === selectedExercise);
-      const minutes = parseInt(exercise?.duration || '0');
+  const handleExerciseComplete = (exerciseId: number) => {
+    if (!userProgress.completedExercises.includes(exerciseId.toString())) {
+      // Only increment completedDays when completing a new exercise
+      const shouldIncrementDay = userProgress.completedExercises.length % 3 === 0;
       
       setUserProgress(prev => ({
         ...prev,
-        completedExercises: [...prev.completedExercises, selectedExercise],
-        totalMinutes: prev.totalMinutes + minutes,
-        completedDays: Math.min(prev.completedDays + 1, 21),
+        completedExercises: [...prev.completedExercises, exerciseId.toString()],
+        totalMinutes: prev.totalMinutes + parseInt(selectedExercise?.duration || '0'),
+        completedDays: shouldIncrementDay ? prev.completedDays + 1 : prev.completedDays
       }));
     }
-    setCurrentView('dashboard');
-    setSelectedExercise(null);
+    
+    setCurrentView('exercises');
   };
 
-  const handleLibraryExerciseComplete = () => {
-    if (selectedLibraryExercise) {
-      const minutes = parseInt(selectedLibraryExercise.duration || '0');
-      
-      setUserProgress(prev => ({
-        ...prev,
-        totalMinutes: prev.totalMinutes + minutes,
-      }));
-    }
-    setCurrentView('exercise-library');
-    setSelectedLibraryExercise(null);
+  const handleTabChange = (tab: View) => {
+    setCurrentView(tab);
   };
 
-  const renderCurrentView = () => {
-    switch (currentView) {
-      case 'program':
-        return (
-          <ProgramCalendar
-            completedDays={userProgress.completedDays}
-            currentDay={userProgress.currentDay}
-            onDaySelect={(day) => {
-              setSelectedExercise(day);
-              setCurrentView('exercise');
-            }}
-            onBack={() => setCurrentView('dashboard')}
-          />
-        );
-      case 'exercise':
-        if (selectedExercise) {
-          const exercise = exercises.find(e => e.id === selectedExercise);
-          if (exercise) {
-            const formattedExercise = {
-              ...exercise,
-              targetArea: exercise.targetAreas?.[0] || 'Corpo Todo',
-              image: exercise.icon
-            };
-            return (
-              <ExerciseDetail
-                exercise={formattedExercise}
-                isCompleted={userProgress.completedExercises.includes(selectedExercise)}
-                onBack={() => setCurrentView('dashboard')}
-                onComplete={handleExerciseComplete}
-                userProgress={userProgress}
-              />
-            );
-          }
-        }
-        return <div>Exercise not found</div>;
-      case 'exercise-library':
-        return (
-          <ExerciseLibrary
-            onBack={() => setCurrentView('dashboard')}
-            onExerciseSelect={(exercise) => {
-              setSelectedLibraryExercise(exercise);
-              setCurrentView('library-exercise-detail');
-            }}
-          />
-        );
-      case 'library-exercise-detail':
-        if (selectedLibraryExercise) {
-          return (
-            <ExerciseDetail
-              exercise={selectedLibraryExercise}
-              isCompleted={false}
-              onBack={() => setCurrentView('exercise-library')}
-              onComplete={handleLibraryExerciseComplete}
-              userProgress={userProgress}
-            />
-          );
-        }
-        return <div>Exercise not found</div>;
-      case 'recipes':
-        return (
-          <RecipeLibrary
-            onBack={() => setCurrentView('dashboard')}
-          />
-        );
-      case 'meditation':
-        return (
-          <MeditationLibrary
-            onBack={() => setCurrentView('dashboard')}
-          />
-        );
-      case 'profile':
-        return (
-          <ProfileScreen
-            onBack={() => setCurrentView('dashboard')}
-            onLogout={handleLogout}
-            currentUser={currentUser}
-            userProgress={userProgress}
-          />
-        );
-      default:
-        return (
-          <Dashboard
-            userProgress={userProgress}
-            currentUser={currentUser}
-            onStartQuickWorkout={() => {
-              setSelectedExercise(1);
-              setCurrentView('exercise');
-            }}
-            onViewProgram={() => setCurrentView('program')}
-            onShowCheckin={() => {}}
-          />
-        );
-    }
+  const handleExerciseSelect = (exercise: typeof exercises[0]) => {
+    setSelectedExercise(exercise);
+    setCurrentView('exercise-detail');
+  };
+
+  const handleProfileClick = () => {
+    setCurrentView('profile');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
-      {/* Header da Empresa */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-purple-100 px-4 py-3 sticky top-0 z-50">
-        <div className="max-w-md mx-auto">
-          <h1 className="text-xl font-bold text-gray-900 text-center">Fenjes</h1>
+    <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white">
+      <div className="max-w-md mx-auto min-h-screen flex flex-col">
+        <div className="flex-1">
+          {currentView === 'dashboard' && (
+            <Dashboard
+              user={currentUser}
+              progress={userProgress}
+              onStartExercise={() => setCurrentView('exercises')}
+              onViewProgram={() => setCurrentView('program')}
+              onProfileClick={handleProfileClick}
+            />
+          )}
+
+          {currentView === 'program' && (
+            <ProgramCalendar
+              progress={userProgress}
+              onBack={() => setCurrentView('dashboard')}
+              user={currentUser}
+              onProfileClick={handleProfileClick}
+              onSelectDay={(day) => {
+                // Implement day selection logic
+                setCurrentView('exercises');
+              }}
+            />
+          )}
+
+          {currentView === 'exercises' && (
+            <ExerciseLibrary
+              onBack={() => setCurrentView('dashboard')}
+              onSelectExercise={handleExerciseSelect}
+              user={currentUser}
+              onProfileClick={handleProfileClick}
+            />
+          )}
+
+          {currentView === 'exercise-detail' && selectedExercise && (
+            <ExerciseDetail
+              exercise={selectedExercise}
+              isCompleted={userProgress.completedExercises.includes(selectedExercise.id.toString())}
+              onBack={() => setCurrentView('exercises')}
+              onComplete={() => handleExerciseComplete(selectedExercise.id)}
+              user={currentUser}
+              onProfileClick={handleProfileClick}
+            />
+          )}
+
+          {currentView === 'recipes' && (
+            <RecipeLibrary 
+              onBack={() => setCurrentView('dashboard')} 
+              user={currentUser}
+              onProfileClick={handleProfileClick}
+            />
+          )}
+
+          {currentView === 'meditation' && (
+            <MeditationLibrary 
+              onBack={() => setCurrentView('dashboard')} 
+              user={currentUser}
+              onProfileClick={handleProfileClick}
+            />
+          )}
+
+          {currentView === 'profile' && (
+            <ProfileScreen
+              onBack={() => setCurrentView('dashboard')}
+              onResetProgress={handleResetProgress}
+              onUpdateUser={handleUpdateUser}
+              currentUser={currentUser}
+              userProgress={userProgress}
+            />
+          )}
         </div>
+
+        <Navigation
+          currentView={currentView}
+          onTabChange={handleTabChange}
+        />
       </div>
-      
-      {renderCurrentView()}
-      <Navigation activeTab={activeTab} onTabChange={handleTabChange} />
     </div>
   );
 };
