@@ -1,138 +1,54 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navigation from '../components/Navigation';
 import Dashboard from '../components/Dashboard';
 import ProgramCalendar from '../components/ProgramCalendar';
 import ExerciseDetail from '../components/ExerciseDetail';
 import ProgressTracking from '../components/ProgressTracking';
+import DailyCheckin from '../components/DailyCheckin';
+import { exercises } from '../data/exercises';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('home');
-  const [currentView, setCurrentView] = useState('dashboard'); // dashboard, program, exercise, progress
+  const [currentView, setCurrentView] = useState('dashboard');
   const [selectedExercise, setSelectedExercise] = useState<number | null>(null);
+  const [showCheckin, setShowCheckin] = useState(false);
 
-  // Mock data for user progress
-  const [userProgress, setUserProgress] = useState({
-    streak: 3,
-    todayMinutes: 9,
-    weekProgress: 65,
-    completedDays: 5,
-    totalMinutes: 127,
-    badges: ['Primeira Semana', '100 Minutos'],
+  // Enhanced user progress with new metrics
+  const [userProgress, setUserProgress] = useState(() => {
+    const saved = localStorage.getItem('yogaChairProgress');
+    return saved ? JSON.parse(saved) : {
+      streak: 3,
+      todayMinutes: 9,
+      weekProgress: 65,
+      completedDays: 5,
+      totalMinutes: 127,
+      badges: ['primeira_semana', '100_minutos'],
+      dailyCheckins: {},
+      completedExercises: [2],
+      currentDay: 6,
+      favoriteExercise: null,
+      weeklyStats: {
+        totalMinutes: 45,
+        avgEnergy: 7,
+        avgMood: 8,
+        avgPain: 4
+      }
+    };
   });
 
-  const [completedExercises, setCompletedExercises] = useState<number[]>([2]);
+  // Save progress to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('yogaChairProgress', JSON.stringify(userProgress));
+  }, [userProgress]);
 
-  const exercises = [
-    {
-      id: 1,
-      name: 'Respiração Cervical',
-      duration: '3min',
-      difficulty: 'Fácil' as const,
-      category: 'Respiração',
-      description: 'Técnica suave de respiração para aliviar tensão na região cervical e pescoço.',
-      benefits: 'Reduz dores de cabeça, diminui tensão no pescoço e melhora a concentração.',
-      instructions: [
-        'Sente-se confortavelmente na cadeira com os pés apoiados no chão',
-        'Coloque uma mão no peito e outra na barriga',
-        'Inspire lentamente pelo nariz, sentindo a barriga expandir',
-        'Mantenha os ombros relaxados durante toda a respiração',
-        'Expire suavemente pela boca, liberando toda a tensão',
-        'Repita por 3 minutos, focando na área do pescoço'
-      ],
-      icon: '🫁'
-    },
-    {
-      id: 2,
-      name: 'Rotação de Ombros',
-      duration: '2min',
-      difficulty: 'Fácil' as const,
-      category: 'Mobilidade',
-      description: 'Movimentos circulares suaves para soltar a musculatura dos ombros.',
-      benefits: 'Alivia rigidez dos ombros, melhora circulação e reduz tensão acumulada.',
-      instructions: [
-        'Mantenha a postura ereta na cadeira',
-        'Eleve os ombros em direção às orelhas',
-        'Rode os ombros para trás em movimentos circulares',
-        'Mantenha o movimento lento e controlado',
-        'Faça 5 rotações para trás, depois 5 para frente',
-        'Termine com os ombros relaxados e soltos'
-      ],
-      icon: '🤸'
-    },
-    {
-      id: 3,
-      name: 'Torção Suave',
-      duration: '4min',
-      difficulty: 'Fácil' as const,
-      category: 'Mobilidade',
-      description: 'Rotação controlada da coluna vertebral para melhorar flexibilidade.',
-      benefits: 'Aumenta mobilidade da coluna, massageia órgãos internos e reduz rigidez.',
-      instructions: [
-        'Sente-se no meio da cadeira com as costas retas',
-        'Coloque a mão direita no joelho esquerdo',
-        'Gire suavemente o tronco para a esquerda',
-        'Mantenha a posição por 30 segundos respirando calmamente',
-        'Volte ao centro lentamente',
-        'Repita o movimento para o lado direito'
-      ],
-      icon: '🌀'
-    },
-    {
-      id: 4,
-      name: 'Alongamento Lombar',
-      duration: '5min',
-      difficulty: 'Médio' as const,
-      category: 'Alívio de Dor',
-      description: 'Série de movimentos para fortalecer e alongar a região lombar.',
-      benefits: 'Fortalece músculos das costas, alivia dor lombar e melhora postura.',
-      instructions: [
-        'Incline-se levemente para frente mantendo as costas retas',
-        'Coloque as mãos nos joelhos para apoio',
-        'Arch suavemente as costas para cima como um gato',
-        'Depois, arch para baixo criando uma curva lombar',
-        'Mantenha cada posição por 10 segundos',
-        'Repita o movimento 10 vezes lentamente'
-      ],
-      icon: '💆'
-    },
-    {
-      id: 5,
-      name: 'Mobilidade de Quadril',
-      duration: '4min',
-      difficulty: 'Médio' as const,
-      category: 'Mobilidade',
-      description: 'Exercícios para aumentar a flexibilidade e amplitude de movimento do quadril.',
-      benefits: 'Melhora circulação nas pernas, reduz rigidez do quadril e alivia tensão lombar.',
-      instructions: [
-        'Sente-se na borda da cadeira',
-        'Eleve o joelho direito em direção ao peito',
-        'Segure com as duas mãos por 15 segundos',
-        'Solte e faça pequenos círculos com o joelho',
-        'Repita com a perna esquerda',
-        'Termine com movimentos suaves de balanceio'
-      ],
-      icon: '🦵'
-    },
-    {
-      id: 6,
-      name: 'Meditação Postural',
-      duration: '3min',
-      difficulty: 'Fácil' as const,
-      category: 'Relaxamento',
-      description: 'Prática meditativa focada na consciência corporal e alinhamento postural.',
-      benefits: 'Desenvolve consciência corporal, reduz estresse e melhora alinhamento natural.',
-      instructions: [
-        'Sente-se com a coluna ereta mas relaxada',
-        'Feche os olhos suavemente',
-        'Escaneie seu corpo da cabeça aos pés',
-        'Notice qualquer tensão e respire para essas áreas',
-        'Visualize uma linha dourada alinhando sua coluna',
-        'Termine com três respirações profundas'
-      ],
-      icon: '🧘'
+  // Check if user needs daily check-in
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    if (!userProgress.dailyCheckins[today]) {
+      setShowCheckin(true);
     }
-  ];
+  }, [userProgress]);
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -146,29 +62,77 @@ const Index = () => {
   };
 
   const handleExerciseComplete = () => {
-    if (selectedExercise && !completedExercises.includes(selectedExercise)) {
-      setCompletedExercises([...completedExercises, selectedExercise]);
+    if (selectedExercise && !userProgress.completedExercises.includes(selectedExercise)) {
+      const exercise = exercises.find(e => e.id === selectedExercise);
+      const minutes = parseInt(exercise?.duration || '0');
+      
       setUserProgress(prev => ({
         ...prev,
-        todayMinutes: prev.todayMinutes + parseInt(exercises.find(e => e.id === selectedExercise)?.duration || '0'),
-        completedDays: prev.completedDays < 21 ? prev.completedDays + 1 : prev.completedDays,
-        totalMinutes: prev.totalMinutes + parseInt(exercises.find(e => e.id === selectedExercise)?.duration || '0')
+        completedExercises: [...prev.completedExercises, selectedExercise],
+        todayMinutes: prev.todayMinutes + minutes,
+        totalMinutes: prev.totalMinutes + minutes,
+        completedDays: Math.min(prev.completedDays + 1, 21),
+        streak: prev.streak + 1,
+        badges: updateBadges(prev, minutes)
       }));
     }
     setCurrentView('dashboard');
     setSelectedExercise(null);
   };
 
+  const updateBadges = (progress: any, addedMinutes: number) => {
+    const newBadges = [...progress.badges];
+    
+    // Check for new badges
+    if (progress.streak >= 3 && !newBadges.includes('primeira_sequencia')) {
+      newBadges.push('primeira_sequencia');
+    }
+    if (progress.streak >= 7 && !newBadges.includes('guerreira')) {
+      newBadges.push('guerreira');
+    }
+    if (progress.completedDays >= 21 && !newBadges.includes('zen_master')) {
+      newBadges.push('zen_master');
+    }
+    if (progress.totalMinutes + addedMinutes >= 200 && !newBadges.includes('dedicada')) {
+      newBadges.push('dedicada');
+    }
+    if (addedMinutes <= 5 && !newBadges.includes('flash')) {
+      newBadges.push('flash');
+    }
+    
+    return newBadges;
+  };
+
+  const handleDailyCheckin = (checkinData: any) => {
+    const today = new Date().toISOString().split('T')[0];
+    setUserProgress(prev => ({
+      ...prev,
+      dailyCheckins: {
+        ...prev.dailyCheckins,
+        [today]: checkinData
+      }
+    }));
+    setShowCheckin(false);
+  };
+
   const renderCurrentView = () => {
+    if (showCheckin) {
+      return (
+        <DailyCheckin 
+          onComplete={handleDailyCheckin}
+          onSkip={() => setShowCheckin(false)}
+        />
+      );
+    }
+
     switch (currentView) {
       case 'program':
         return (
           <ProgramCalendar
             completedDays={userProgress.completedDays}
-            currentDay={userProgress.completedDays + 1}
+            currentDay={userProgress.currentDay}
             onDaySelect={(day) => {
-              // For demo, just show the first exercise for any day
-              setSelectedExercise(1);
+              setSelectedExercise(day);
               setCurrentView('exercise');
             }}
             onBack={() => setCurrentView('dashboard')}
@@ -181,9 +145,10 @@ const Index = () => {
             return (
               <ExerciseDetail
                 exercise={exercise}
-                isCompleted={completedExercises.includes(selectedExercise)}
+                isCompleted={userProgress.completedExercises.includes(selectedExercise)}
                 onBack={() => setCurrentView('dashboard')}
                 onComplete={handleExerciseComplete}
+                userProgress={userProgress}
               />
             );
           }
@@ -205,6 +170,7 @@ const Index = () => {
               setCurrentView('exercise');
             }}
             onViewProgram={() => setCurrentView('program')}
+            onShowCheckin={() => setShowCheckin(true)}
           />
         );
     }
