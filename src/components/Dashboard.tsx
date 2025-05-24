@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Calendar, Clock, Target, ArrowRight, Zap } from 'lucide-react';
+import { Calendar, Clock, Target, ArrowRight, Zap, BookOpen, Dumbbell } from 'lucide-react';
 import StatsCard from './StatsCard';
 
 interface DashboardProps {
@@ -20,27 +20,30 @@ const Dashboard: React.FC<DashboardProps> = ({
   onStartQuickWorkout, 
   onViewProgram
 }) => {
+  const getGreetingMessage = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) {
+      return "Bom dia! ☀️";
+    } else if (hour < 18) {
+      return "Boa tarde! 🌤️";
+    } else {
+      return "Boa noite! 🌙";
+    }
+  };
+
   const todayExercises = [
     { name: 'Respiração Cervical', duration: '3min', category: 'Respiração', completed: false },
     { name: 'Rotação de Ombros', duration: '2min', category: 'Mobilidade', completed: true },
     { name: 'Torção Suave', duration: '4min', category: 'Mobilidade', completed: false },
   ];
 
-  const getGreetingMessage = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) {
-      return "Bom dia, Ana! ☀️";
-    } else if (hour < 18) {
-      return "Boa tarde, Ana! 🌤️";
-    } else {
-      return "Boa noite, Ana! 🌙";
-    }
-  };
-
   return (
     <div className="p-4 pb-24 max-w-md mx-auto">
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-6 text-center">
+        <div className="w-20 h-20 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full flex items-center justify-center text-3xl text-white mx-auto mb-4">
+          🧘‍♀️
+        </div>
         <h1 className="text-2xl font-bold text-purple-900 mb-2">
           {getGreetingMessage()}
         </h1>
@@ -67,7 +70,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         />
       </div>
 
-      {/* Progress Card */}
+      {/* Program Progress */}
       <div className="gradient-card rounded-2xl p-5 mb-6 shadow-lg">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-purple-900">Programa 21 Dias</h3>
@@ -134,19 +137,21 @@ const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-4 mb-6">
         <button
           onClick={onStartQuickWorkout}
           className="gradient-secondary text-white p-4 rounded-xl font-medium hover:scale-105 transition-transform"
         >
           <Zap className="w-5 h-5 mx-auto mb-1" />
-          Treino Rápido
-          <span className="block text-sm opacity-90">5 minutos</span>
+          <span className="text-sm">Treino Rápido</span>
         </button>
         <button className="bg-white border border-purple-200 text-purple-700 p-4 rounded-xl font-medium hover:scale-105 transition-transform">
-          <Target className="w-5 h-5 mx-auto mb-1" />
-          Dica do Dia
-          <span className="block text-sm opacity-70">Postura</span>
+          <Dumbbell className="w-5 h-5 mx-auto mb-1" />
+          <span className="text-sm">Exercícios</span>
+        </button>
+        <button className="bg-white border border-purple-200 text-purple-700 p-4 rounded-xl font-medium hover:scale-105 transition-transform">
+          <BookOpen className="w-5 h-5 mx-auto mb-1" />
+          <span className="text-sm">Receitas</span>
         </button>
       </div>
 

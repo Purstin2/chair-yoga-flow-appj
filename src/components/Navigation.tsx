@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Home, Calendar, ChefHat, User } from 'lucide-react';
+import { Home, Calendar, ChefHat, User, Dumbbell } from 'lucide-react';
 
 interface NavigationProps {
   activeTab: string;
@@ -11,6 +11,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }) => {
   const tabs = [
     { id: 'home', icon: Home, label: 'Início' },
     { id: 'program', icon: Calendar, label: 'Programa' },
+    { id: 'exercises', icon: Dumbbell, label: 'Exercícios' },
     { id: 'recipes', icon: ChefHat, label: 'Receitas' },
     { id: 'profile', icon: User, label: 'Perfil' },
   ];
@@ -22,13 +23,13 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }) => {
           <button
             key={id}
             onClick={() => onTabChange(id)}
-            className={`flex flex-col items-center py-2 px-4 rounded-lg transition-all duration-200 ${
+            className={`flex flex-col items-center py-2 px-3 rounded-lg transition-all duration-200 ${
               activeTab === id
                 ? 'text-purple-600 transform scale-105'
                 : 'text-gray-500 hover:text-purple-500'
             }`}
           >
-            <Icon size={20} />
+            <Icon size={18} />
             <span className="text-xs mt-1 font-medium">{label}</span>
           </button>
         ))}

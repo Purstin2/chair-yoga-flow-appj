@@ -4,6 +4,7 @@ import Navigation from '../components/Navigation';
 import Dashboard from '../components/Dashboard';
 import ProgramCalendar from '../components/ProgramCalendar';
 import ExerciseDetail from '../components/ExerciseDetail';
+import ExerciseLibrary from '../components/ExerciseLibrary';
 import RecipeLibrary from '../components/RecipeLibrary';
 import ProfileScreen from '../components/ProfileScreen';
 import { exercises } from '../data/exercises';
@@ -12,6 +13,7 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedExercise, setSelectedExercise] = useState<number | null>(null);
+  const [selectedLibraryExercise, setSelectedLibraryExercise] = useState<any | null>(null);
 
   // Simplified user progress without gamification
   const [userProgress, setUserProgress] = useState(() => {
@@ -35,6 +37,8 @@ const Index = () => {
       setCurrentView('dashboard');
     } else if (tab === 'program') {
       setCurrentView('program');
+    } else if (tab === 'exercises') {
+      setCurrentView('exercise-library');
     } else if (tab === 'recipes') {
       setCurrentView('recipes');
     } else if (tab === 'profile') {
@@ -56,6 +60,19 @@ const Index = () => {
     }
     setCurrentView('dashboard');
     setSelectedExercise(null);
+  };
+
+  const handleLibraryExerciseComplete = () => {
+    if (selectedLibraryExercise) {
+      const minutes = parseInt(selectedLibraryExercise.duration || '0');
+      
+      setUserProgress(prev => ({
+        ...prev,
+        totalMinutes: prev.totalMinutes + minutes,
+      }));
+    }
+    setCurrentView('exercise-library');
+    setSelectedLibraryExercise(null);
   };
 
   const renderCurrentView = () => {
@@ -86,6 +103,29 @@ const Index = () => {
               />
             );
           }
+        }
+        return <div>Exercise not found</div>;
+      case 'exercise-library':
+        return (
+          <ExerciseLibrary
+            onBack={() => setCurrentView('dashboard')}
+            onExerciseSelect={(exercise) => {
+              setSelectedLibraryExercise(exercise);
+              setCurrentView('library-exercise-detail');
+            }}
+          />
+        );
+      case 'library-exercise-detail':
+        if (selectedLibraryExercise) {
+          return (
+            <ExerciseDetail
+              exercise={selectedLibraryExercise}
+              isCompleted={false}
+              onBack={() => setCurrentView('exercise-library')}
+              onComplete={handleLibraryExerciseComplete}
+              userProgress={userProgress}
+            />
+          );
         }
         return <div>Exercise not found</div>;
       case 'recipes':

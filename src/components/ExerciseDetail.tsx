@@ -1,7 +1,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Clock, Target, CheckCircle, Play, Pause, Square, RotateCcw } from 'lucide-react';
-import { Exercise } from '../data/exercises';
+
+interface Exercise {
+  id: number;
+  name: string;
+  duration: string;
+  difficulty: string;
+  category: string;
+  targetArea: string;
+  image: string;
+  description: string;
+  benefits: string;
+  instructions: string[];
+}
 
 interface ExerciseDetailProps {
   exercise: Exercise;
@@ -78,28 +90,6 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
   const progress = ((parseInt(exercise.duration) * 60 - timeRemaining) / (parseInt(exercise.duration) * 60)) * 100;
 
   const difficultyColor = exercise.difficulty === 'Fácil' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700';
-  const categoryColors = {
-    'Respiração': 'bg-blue-100 text-blue-700',
-    'Mobilidade': 'bg-purple-100 text-purple-700',
-    'Alívio de Dor': 'bg-red-100 text-red-700',
-    'Relaxamento': 'bg-green-100 text-green-700',
-    'Fortalecimento': 'bg-orange-100 text-orange-700',
-  };
-
-  // Get today's checkin for adaptation
-  const today = new Date().toISOString().split('T')[0];
-  const todayCheckin = userProgress?.dailyCheckins?.[today];
-
-  const getMotivationalMessage = () => {
-    if (todayCheckin?.mood === 'tired') {
-      return "Hoje pode ser só alguns minutos. O importante é cuidar de você! 💜";
-    } else if (todayCheckin?.mood === 'stressed') {
-      return "Vamos liberar essa tensão juntas. Você merece esse momento! 🌸";
-    } else if (todayCheckin?.mood === 'energized') {
-      return "Que energia linda! Vamos aproveitar para um treino completo! ⚡";
-    }
-    return "Respirando bem? Você está indo ótimo! Continue assim! 🌟";
-  };
 
   return (
     <div className="p-4 pb-24 max-w-md mx-auto">
@@ -124,7 +114,7 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
       {/* Exercise Icon */}
       <div className="text-center mb-6">
         <div className="w-24 h-24 gradient-primary rounded-3xl flex items-center justify-center text-4xl text-white mx-auto mb-4">
-          {exercise.icon}
+          {exercise.image}
         </div>
       </div>
 
@@ -138,8 +128,8 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
           <span className={`px-3 py-1 rounded-full text-xs font-medium ${difficultyColor}`}>
             {exercise.difficulty}
           </span>
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${categoryColors[exercise.category as keyof typeof categoryColors]}`}>
-            {exercise.category}
+          <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+            {exercise.targetArea}
           </span>
         </div>
         
@@ -147,28 +137,9 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
           {exercise.description}
         </p>
         
-        <div className="bg-purple-50 rounded-xl p-3 mb-4">
+        <div className="bg-purple-50 rounded-xl p-3">
           <h4 className="font-semibold text-purple-900 mb-2">🎯 Benefícios:</h4>
           <p className="text-sm text-purple-700">{exercise.benefits}</p>
-        </div>
-
-        {/* Detailed Instructions */}
-        <div className="bg-white rounded-xl p-3 border border-purple-100">
-          <h4 className="font-semibold text-purple-900 mb-3">📋 Guia Rápido:</h4>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div>
-              <span className="font-medium text-purple-800">Posição:</span>
-              <p className="text-purple-600">{exercise.detailedInstructions.position}</p>
-            </div>
-            <div>
-              <span className="font-medium text-purple-800">Respiração:</span>
-              <p className="text-purple-600">{exercise.detailedInstructions.breathing}</p>
-            </div>
-          </div>
-          <div className="mt-2 pt-2 border-t border-purple-100">
-            <span className="font-medium text-purple-800">⚠️ Cuidado:</span>
-            <p className="text-xs text-purple-600">{exercise.detailedInstructions.caution}</p>
-          </div>
         </div>
       </div>
 
@@ -239,12 +210,6 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
               </button>
             </div>
           </div>
-          
-          <div className="bg-purple-50 rounded-xl p-3 text-center">
-            <p className="text-sm text-purple-700 font-medium">
-              {getMotivationalMessage()}
-            </p>
-          </div>
         </div>
       )}
 
@@ -291,20 +256,6 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
               </div>
             ))}
           </div>
-
-          {/* Adaptation based on daily checkin */}
-          {todayCheckin && (
-            <div className="bg-blue-50 rounded-xl p-3 mb-4">
-              <h4 className="font-semibold text-blue-900 mb-2">
-                💡 Adaptado para como você se sente hoje:
-              </h4>
-              <ul className="text-sm text-blue-700 space-y-1">
-                {exercise.adaptations[todayCheckin.mood as keyof typeof exercise.adaptations]?.map((tip, index) => (
-                  <li key={index}>• {tip}</li>
-                ))}
-              </ul>
-            </div>
-          )}
           
           {!isCompleted ? (
             <button
@@ -317,26 +268,11 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
             <div className="text-center py-4">
               <CheckCircle className="text-green-500 mx-auto mb-2" size={32} />
               <p className="text-green-700 font-medium">Exercício Concluído!</p>
-              <p className="text-sm text-green-600 mt-1">Parabéns! Mais um passo na sua transformação! 🎉</p>
+              <p className="text-sm text-green-600 mt-1">Parabéns! Continue assim! 🎉</p>
             </div>
           )}
         </div>
       ) : null}
-
-      {/* Target Areas */}
-      <div className="gradient-card rounded-2xl p-4 shadow-lg">
-        <h4 className="font-semibold text-purple-900 mb-3">🎯 Áreas Trabalhadas:</h4>
-        <div className="flex flex-wrap gap-2">
-          {exercise.targetAreas.map((area, index) => (
-            <span
-              key={index}
-              className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium"
-            >
-              {area}
-            </span>
-          ))}
-        </div>
-      </div>
     </div>
   );
 };
