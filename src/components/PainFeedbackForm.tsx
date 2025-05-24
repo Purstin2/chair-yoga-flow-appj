@@ -10,6 +10,9 @@ export interface PainFeedbackData {
   painLevel: number;
   tensionAreas: string[];
   energyLevel: string;
+  mood?: string; // Added for more comprehensive assessment
+  difficulty?: 'easy' | 'challenging' | 'hard'; // Added for post-exercise feedback
+  notes?: string; // Optional notes
   experience?: number; // 1-5 stars, only for post-session
 }
 
@@ -21,6 +24,9 @@ const PainFeedbackForm: React.FC<PainFeedbackFormProps> = ({
     painLevel: 1,
     tensionAreas: [],
     energyLevel: '',
+    mood: '',
+    difficulty: isPreSession ? undefined : 'challenging',
+    notes: '',
     experience: isPreSession ? undefined : 5
   });
 
@@ -41,6 +47,18 @@ const PainFeedbackForm: React.FC<PainFeedbackFormProps> = ({
     setFeedbackData(prev => ({ ...prev, energyLevel: level }));
   };
 
+  const handleMoodChange = (mood: string) => {
+    setFeedbackData(prev => ({ ...prev, mood }));
+  };
+
+  const handleDifficultyChange = (difficulty: 'easy' | 'challenging' | 'hard') => {
+    setFeedbackData(prev => ({ ...prev, difficulty }));
+  };
+
+  const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setFeedbackData(prev => ({ ...prev, notes: e.target.value }));
+  };
+
   const handleExperienceChange = (stars: number) => {
     setFeedbackData(prev => ({ ...prev, experience: stars }));
   };
@@ -53,10 +71,23 @@ const PainFeedbackForm: React.FC<PainFeedbackFormProps> = ({
     { level: 10, emoji: '😭', label: 'Severa' }
   ];
 
-  const tensionAreas = ['Pescoço', 'Ombros', 'Costas', 'Quadris', 'Joelhos', 'Nenhuma área'];
+  const tensionAreas = ['Pescoço', 'Ombros', 'Costas (superior)', 'Costas (inferior)', 'Quadril', 'Joelhos', 'Punhos/Mãos', 'Tornozelos/Pés', 'Nenhuma área'];
   
   const energyLevels = [
     'Muito baixa', 'Baixa', 'Normal', 'Boa', 'Muito boa'
+  ];
+
+  const moodOptions = [
+    { value: 'relaxed', label: '😌 Relaxada' },
+    { value: 'energized', label: '⚡ Energizada' },
+    { value: 'tired', label: '😴 Cansada' },
+    { value: 'pain', label: '😣 Com dor' }
+  ];
+
+  const difficultyOptions = [
+    { value: 'easy', label: '🟢 Fácil' },
+    { value: 'challenging', label: '🟠 Desafiador' },
+    { value: 'hard', label: '🔴 Difícil' }
   ];
 
   const isFormValid = () => {
@@ -64,7 +95,11 @@ const PainFeedbackForm: React.FC<PainFeedbackFormProps> = ({
       feedbackData.painLevel > 0 &&
       feedbackData.tensionAreas.length > 0 &&
       feedbackData.energyLevel !== '' &&
-      (!isPreSession || feedbackData.experience !== undefined)
+      feedbackData.mood !== '' &&
+      (!isPreSession || (
+        feedbackData.experience !== undefined &&
+        feedbackData.difficulty !== undefined
+      ))
     );
   };
 
@@ -81,7 +116,7 @@ const PainFeedbackForm: React.FC<PainFeedbackFormProps> = ({
           </CardHeader>
           <CardContent className="space-y-6">
             <div>
-              <h3 className="font-medium text-gray-900 mb-3">
+              <h3 className="font-medium text-gray-900 mb-3 text-lg">
                 Nível de dor/desconforto (1-10):
               </h3>
               <div className="flex justify-between items-end mb-1">
@@ -94,9 +129,10 @@ const PainFeedbackForm: React.FC<PainFeedbackFormProps> = ({
                         ? 'transform scale-110'
                         : 'opacity-70'
                     }`}
+                    aria-label={`Nível de dor ${face.level} - ${face.label}`}
                   >
-                    <span className="text-2xl mb-1">{face.emoji}</span>
-                    <span className="text-xs text-gray-700">{face.level}</span>
+                    <span className="text-3xl mb-1">{face.emoji}</span>
+                    <span className="text-sm text-gray-700">{face.level}</span>
                   </button>
                 ))}
               </div>
@@ -109,7 +145,7 @@ const PainFeedbackForm: React.FC<PainFeedbackFormProps> = ({
             </div>
 
             <div>
-              <h3 className="font-medium text-gray-900 mb-3">
+              <h3 className="font-medium text-gray-900 mb-3 text-lg">
                 {isPreSession 
                   ? "Onde sente mais tensão hoje?" 
                   : "Onde ainda sente tensão?"}
@@ -124,6 +160,7 @@ const PainFeedbackForm: React.FC<PainFeedbackFormProps> = ({
                         ? 'bg-purple-100 text-purple-700 border border-purple-300'
                         : 'bg-white border border-gray-300 text-gray-700 hover:border-gray-400'
                     }`}
+                    aria-label={`Área de tensão: ${area}`}
                   >
                     {area}
                   </button>
@@ -132,17 +169,18 @@ const PainFeedbackForm: React.FC<PainFeedbackFormProps> = ({
             </div>
 
             <div>
-              <h3 className="font-medium text-gray-900 mb-3">Como está sua energia?</h3>
+              <h3 className="font-medium text-gray-900 mb-3 text-lg">Como está sua energia?</h3>
               <div className="space-y-2">
                 {energyLevels.map(level => (
                   <button
                     key={level}
                     onClick={() => handleEnergyLevelChange(level)}
-                    className={`w-full p-3 rounded-lg border text-left transition ${
+                    className={`w-full p-3 rounded-lg border text-left transition-colors text-base ${
                       feedbackData.energyLevel === level
                         ? 'bg-purple-100 border-purple-500 text-purple-700'
                         : 'border-gray-300 hover:border-gray-400'
                     }`}
+                    aria-label={`Nível de energia: ${level}`}
                   >
                     {level}
                   </button>
@@ -150,33 +188,87 @@ const PainFeedbackForm: React.FC<PainFeedbackFormProps> = ({
               </div>
             </div>
 
-            {!isPreSession && (
-              <div>
-                <h3 className="font-medium text-gray-900 mb-3">Como foi a experiência?</h3>
-                <div className="flex justify-center space-x-2">
-                  {[1, 2, 3, 4, 5].map(star => (
-                    <button
-                      key={star}
-                      onClick={() => handleExperienceChange(star)}
-                      className="text-3xl transition-transform focus:outline-none"
-                    >
-                      <span className={`${
-                        (feedbackData.experience || 0) >= star 
-                          ? 'text-yellow-400' 
-                          : 'text-gray-300'
-                      }`}>
-                        ★
-                      </span>
-                    </button>
-                  ))}
-                </div>
+            <div>
+              <h3 className="font-medium text-gray-900 mb-3 text-lg">Como se sente?</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {moodOptions.map(option => (
+                  <button
+                    key={option.value}
+                    onClick={() => handleMoodChange(option.value)}
+                    className={`p-3 rounded-lg border text-center transition-colors text-base ${
+                      feedbackData.mood === option.value
+                        ? 'bg-purple-100 border-purple-500 text-purple-700'
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                    aria-label={`Humor: ${option.label}`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
               </div>
+            </div>
+
+            {!isPreSession && (
+              <>
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-3 text-lg">Dificuldade do exercício</h3>
+                  <div className="flex justify-between">
+                    {difficultyOptions.map(option => (
+                      <button
+                        key={option.value}
+                        onClick={() => handleDifficultyChange(option.value as 'easy' | 'challenging' | 'hard')}
+                        className={`flex-1 p-3 mx-1 rounded-lg border text-center transition-colors text-base ${
+                          feedbackData.difficulty === option.value
+                            ? 'bg-purple-100 border-purple-500 text-purple-700'
+                            : 'border-gray-300 hover:border-gray-400'
+                        }`}
+                        aria-label={`Dificuldade: ${option.label}`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-3 text-lg">Como foi a experiência?</h3>
+                  <div className="flex justify-center space-x-2">
+                    {[1, 2, 3, 4, 5].map(star => (
+                      <button
+                        key={star}
+                        onClick={() => handleExperienceChange(star)}
+                        className="text-3xl transition-transform focus:outline-none"
+                        aria-label={`${star} estrelas`}
+                      >
+                        <span className={`${
+                          (feedbackData.experience || 0) >= star 
+                            ? 'text-yellow-400' 
+                            : 'text-gray-300'
+                        }`}>
+                          ★
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
             )}
+
+            <div>
+              <h3 className="font-medium text-gray-900 mb-2 text-lg">Observações (opcional)</h3>
+              <textarea
+                value={feedbackData.notes || ''}
+                onChange={handleNotesChange}
+                placeholder="Adicione informações específicas sobre como está se sentindo..."
+                className="w-full p-3 border rounded-lg text-base focus:outline-none focus:ring-1 focus:ring-purple-500"
+                rows={3}
+              />
+            </div>
 
             <button
               onClick={() => onComplete(feedbackData)}
               disabled={!isFormValid()}
-              className="w-full py-3 mt-4 bg-purple-600 text-white rounded-lg font-medium transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+              className="w-full py-3 mt-4 bg-purple-600 text-white rounded-lg font-medium text-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
               {isPreSession ? "Adaptar exercícios para hoje" : "Salvar e continuar jornada"}
             </button>

@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -148,4 +147,147 @@ input::placeholder, textarea::placeholder {
   background: white;
   color: #374151 !important;
   border: 1px solid #D1D5DB;
+}
+
+/* Exercise screen styles */
+.exercise-screen {
+  padding: 20px;
+  min-height: 100vh;
+}
+
+.current-instruction {
+  text-align: center;
+  margin: 40px 0;
+}
+
+.large-text {
+  font-size: 20px; /* Larger text for better readability */
+  line-height: 1.8; /* Increased line height */
+  color: #2D1441; /* Higher contrast color */
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+.timer-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: conic-gradient(#7432B4 0deg, #F7F3FF 360deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px; /* Larger text */
+  font-weight: bold;
+  color: #7432B4;
+}
+
+.start-btn-large, .complete-btn-large {
+  width: 100%;
+  height: 60px;
+  font-size: 18px;
+  font-weight: bold;
+  background: linear-gradient(135deg, #7432B4, #9747FF);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  margin: 10px 0;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #F7F3FF;
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 20px 0;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #7432B4, #9747FF);
+  transition: width 0.3s ease;
+}
+
+/* Improved exercise titles and text for accessibility */
+.exercise-title {
+  font-size: 24px; /* Was 18px */
+  font-weight: 700;
+  color: #2D1441;
+}
+
+.instruction-text {
+  font-size: 20px; /* Was 16px */
+  line-height: 1.8; /* Was 1.4 */
+  color: #2D1441;
+  text-align: center;
+}
+
+.step-counter {
+  font-size: 16px;
+  color: #7432B4;
+  font-weight: 600;
+}
+
+/* Better contrast containers */
+.high-contrast {
+  background: rgba(116, 50, 180, 0.1);
+  border: 2px solid #7432B4;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 16px 0;
+}
+
+/* Pain assessment styles */
+.pain-assessment {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.pain-scale {
+  margin: 20px 0;
+}
+
+.pain-level-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin: 0 5px;
+  font-weight: bold;
+  background: #f7f7f7;
+  border: 1px solid #e5e5e5;
+  transition: all 0.2s;
+}
+
+.pain-level-btn:hover {
+  background: #7432B4;
+  color: white;
+}
+
+.pain-level-btn.active {
+  background: #7432B4;
+  color: white;
+  transform: scale(1.1);
+}
+
+.mood-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.mood-options button {
+  padding: 12px;
+  border-radius: 10px;
+  background: #f7f7f7;
+  border: 1px solid #e5e5e5;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+
+.mood-options button:hover {
+  background: #f0ebf7;
+  border-color: #7432B4;
 }

@@ -7,46 +7,42 @@ import {
   SpeakerWaveIcon,
   SpeakerXMarkIcon
 } from '@heroicons/react/24/solid';
+import useAudioCues from '@/hooks/useAudioCues';
 
 interface ExerciseTimerProps {
   initialDuration: number; // in seconds
   onComplete: () => void;
   showConfetti?: boolean;
   autoStart?: boolean;
+  currentStep?: number;
+  totalSteps?: number;
+  progress?: number;
+  isAutoMode?: boolean;
 }
 
 const ExerciseTimer: React.FC<ExerciseTimerProps> = ({
   initialDuration,
   onComplete,
   showConfetti = false,
-  autoStart = false
+  autoStart = false,
+  currentStep = 0,
+  totalSteps = 1,
+  progress = 0,
+  isAutoMode = false
 }) => {
   const [timeLeft, setTimeLeft] = useState(initialDuration);
   const [isRunning, setIsRunning] = useState(autoStart);
   const [soundEnabled, setSoundEnabled] = useState(true);
   
   const timerRef = useRef<number | null>(null);
-  const beepSoundRef = useRef<HTMLAudioElement | null>(null);
-  const completeSoundRef = useRef<HTMLAudioElement | null>(null);
+  const { playStartSound, playStepTransition, playCompletionSound, playFallbackBeep } = useAudioCues();
 
   // Initialize sound effects
   useEffect(() => {
-    // Creating audio elements for sounds
-    beepSoundRef.current = new Audio('/beep.mp3');
-    completeSoundRef.current = new Audio('/complete.mp3');
-    
-    // Cleanup sounds on unmount
-    return () => {
-      if (beepSoundRef.current) {
-        beepSoundRef.current.pause();
-        beepSoundRef.current = null;
-      }
-      if (completeSoundRef.current) {
-        completeSoundRef.current.pause();
-        completeSoundRef.current = null;
-      }
-    };
-  }, []);
+    if (autoStart && soundEnabled) {
+      playStartSound();
+    }
+  }, [autoStart, soundEnabled, playStartSound]);
 
   // Save timer state to localStorage
   useEffect(() => {
@@ -91,8 +87,8 @@ const ExerciseTimer: React.FC<ExerciseTimerProps> = ({
 
   const handleTimerComplete = () => {
     // Play completion sound
-    if (soundEnabled && completeSoundRef.current) {
-      completeSoundRef.current.play();
+    if (soundEnabled) {
+      playCompletionSound();
     }
     
     // Vibrate device if supported
@@ -105,8 +101,8 @@ const ExerciseTimer: React.FC<ExerciseTimerProps> = ({
   };
 
   const startTimer = () => {
-    if (soundEnabled && beepSoundRef.current) {
-      beepSoundRef.current.play();
+    if (soundEnabled) {
+      playStartSound();
     }
     setIsRunning(true);
   };
@@ -130,6 +126,10 @@ const ExerciseTimer: React.FC<ExerciseTimerProps> = ({
 
   // Calculate timer progress percentage
   const getTimerProgress = () => {
+    // If in auto mode, use the progress provided
+    if (isAutoMode && progress !== undefined) {
+      return progress;
+    }
     return (timeLeft / initialDuration) * 100;
   };
 
@@ -154,6 +154,86 @@ const ExerciseTimer: React.FC<ExerciseTimerProps> = ({
 
   const { circumference, dashoffset } = calculateCircleValues();
 
+  // Simplified auto mode version (minimal controls)
+  if (isAutoMode) {
+    return (
+      <div className="flex flex-col items-center">
+        {/* Circular Timer */}
+        <div className="relative w-40 h-40 mb-4">
+          <svg className="w-full h-full" viewBox="0 0 100 100">
+            {/* Background circle */}
+            <circle 
+              cx="50" 
+              cy="50" 
+              r="45"
+              fill="none"
+              stroke="#e2e8f0"
+              strokeWidth="5"
+            />
+            
+            {/* Progress circle */}
+            <circle 
+              cx="50" 
+              cy="50" 
+              r="45"
+              fill="none"
+              stroke="#7432B4"
+              strokeWidth="5"
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={dashoffset}
+              transform="rotate(-90 50 50)"
+              className="transition-all duration-300"
+            />
+            
+            {/* Time text */}
+            <text
+              x="50"
+              y="45"
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fontSize="16"
+              fontWeight="bold"
+              fill="#1a202c"
+            >
+              {formatTime(timeLeft)}
+            </text>
+            
+            {/* Step counter */}
+            <text
+              x="50"
+              y="65"
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fontSize="12"
+              fill="#4B5563"
+            >
+              Passo {currentStep + 1}/{totalSteps}
+            </text>
+          </svg>
+        </div>
+        
+        {/* Sound toggle only */}
+        <button
+          onClick={toggleSound}
+          className={`w-12 h-12 rounded-full flex items-center justify-center shadow transition-colors ${
+            soundEnabled 
+              ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' 
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          }`}
+          aria-label={soundEnabled ? "Desativar som" : "Ativar som"}
+        >
+          {soundEnabled ? (
+            <SpeakerWaveIcon className="h-6 w-6" />
+          ) : (
+            <SpeakerXMarkIcon className="h-6 w-6" />
+          )}
+        </button>
+      </div>
+    );
+  }
+
+  // Regular version with full controls
   return (
     <div className="flex flex-col items-center">
       {/* Circular Timer */}

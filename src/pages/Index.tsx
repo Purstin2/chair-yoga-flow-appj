@@ -11,12 +11,11 @@ import ProfileScreen from "@/components/ProfileScreen";
 import MedicalQuiz from "@/components/MedicalQuiz";
 import MedicalDisclaimer from "@/components/MedicalDisclaimer";
 import OnboardingTutorial from "@/components/OnboardingTutorial";
-import PainFeedbackForm, { PainFeedbackData } from "@/components/PainFeedbackForm";
-import { exercises } from "@/data/exercises";
-import { scientificExercises } from "@/data/scientificExercises";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { exercises } from "@/data/exercises";
+import allExercises from "@/data/allScientificExercises";
 
-type View = 'dashboard' | 'program' | 'exercises' | 'exercise-detail' | 'recipes' | 'meditation' | 'profile' | 'quiz' | 'disclaimer' | 'tutorial' | 'feedback' | 'nutrition';
+type View = 'dashboard' | 'program' | 'exercises' | 'exercise-detail' | 'recipes' | 'meditation' | 'profile' | 'quiz' | 'disclaimer' | 'tutorial' | 'nutrition';
 
 // Default user for all
 const defaultUser: User = {
@@ -56,7 +55,6 @@ const Index = () => {
   const [currentUser, setCurrentUser] = useState<User>(defaultUser);
   const [userProgress, setUserProgress] = useState<UserProgress>(defaultProgress);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
-  const [showPostExerciseFeedback, setShowPostExerciseFeedback] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
 
   // Load data safely from localStorage
@@ -237,63 +235,6 @@ const Index = () => {
     setCurrentView('quiz');
   };
 
-  const handlePreExerciseFeedback = (feedbackData: PainFeedbackData) => {
-    // Store pre-exercise feedback
-    const today = new Date().toISOString().split('T')[0];
-    
-    setUserProgress(prev => {
-      const updatedProgress = {
-        ...prev,
-        painHistory: [
-          ...(prev.painHistory || []),
-          {
-            date: today,
-            painLevel: feedbackData.painLevel,
-            painAreas: feedbackData.tensionAreas
-          }
-        ]
-      };
-      
-      // Create backup immediately after important changes
-      safelySaveData(STORAGE_KEYS.PROGRESS, updatedProgress);
-      
-      return updatedProgress;
-    });
-    
-    setCurrentView('exercise-detail');
-  };
-
-  const handlePostExerciseFeedback = (feedbackData: PainFeedbackData) => {
-    // Store post-exercise feedback and update daily checkins
-    const today = new Date().toISOString().split('T')[0];
-    const preExercisePain = userProgress.painHistory?.[userProgress.painHistory.length - 1]?.painLevel || 0;
-    
-    setUserProgress(prev => {
-      const updatedProgress = {
-        ...prev,
-        dailyCheckins: [
-          ...(prev.dailyCheckins || []),
-          {
-            date: today,
-            painBefore: preExercisePain,
-            painAfter: feedbackData.painLevel,
-            energy: feedbackData.energyLevel,
-            mood: 'bem', // Default value
-            exercises: selectedExercise ? [selectedExercise.id.toString()] : []
-          }
-        ]
-      };
-      
-      // Create backup immediately
-      safelySaveData(STORAGE_KEYS.PROGRESS, updatedProgress);
-      
-      return updatedProgress;
-    });
-    
-    setShowPostExerciseFeedback(false);
-    setCurrentView('exercises');
-  };
-
   const handleExerciseComplete = (exerciseId: number) => {
     if (!userProgress.completedExercises.includes(exerciseId.toString())) {
       // Only increment completedDays when completing a new exercise
@@ -313,8 +254,8 @@ const Index = () => {
         return updatedProgress;
       });
       
-      // Show post-exercise feedback after completing an exercise
-      setShowPostExerciseFeedback(true);
+      // Voltar para a lista de exercícios após concluir
+      setCurrentView('exercises');
     } else {
       setCurrentView('exercises');
     }
@@ -330,24 +271,13 @@ const Index = () => {
 
   const handleExerciseSelect = (exercise: Exercise) => {
     setSelectedExercise(exercise);
+    // Ir diretamente para o detalhe do exercício
     setCurrentView('exercise-detail');
   };
 
   const handleProfileClick = () => {
     setCurrentView('profile');
   };
-
-  // If showing post-exercise feedback
-  if (showPostExerciseFeedback) {
-    return (
-      <ErrorBoundary fallback={<div>Erro ao carregar formulário. Por favor reinicie o app.</div>}>
-        <PainFeedbackForm 
-          isPreSession={false}
-          onComplete={handlePostExerciseFeedback}
-        />
-      </ErrorBoundary>
-    );
-  }
 
   // Show onboarding flows if needed
   if (currentView === 'quiz') {
@@ -370,17 +300,6 @@ const Index = () => {
     return (
       <ErrorBoundary fallback={<div>Erro ao carregar tutorial. Por favor reinicie o app.</div>}>
         <OnboardingTutorial onComplete={handleTutorialComplete} userName={currentUser.name} />
-      </ErrorBoundary>
-    );
-  }
-
-  if (currentView === 'feedback') {
-    return (
-      <ErrorBoundary fallback={<div>Erro ao carregar formulário. Por favor reinicie o app.</div>}>
-        <PainFeedbackForm 
-          isPreSession={true}
-          onComplete={handlePreExerciseFeedback}
-        />
       </ErrorBoundary>
     );
   }
@@ -430,7 +349,7 @@ const Index = () => {
                 onSelectExercise={handleExerciseSelect}
                 user={currentUser}
                 onProfileClick={handleProfileClick}
-                exercises={scientificExercises}
+                exercises={allExercises}
               />
             )}
 

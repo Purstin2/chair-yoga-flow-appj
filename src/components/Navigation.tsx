@@ -30,43 +30,43 @@ const Navigation: React.FC<NavigationProps> = ({ currentView, onTabChange }) => 
     {
       id: 'dashboard' as Tab,
       label: 'Início',
-      icon: <HomeIcon className="h-6 w-6" />,
-      activeIcon: <HomeIconSolid className="h-6 w-6" />
+      icon: <HomeIcon className="h-6 w-6 text-white" />,
+      activeIcon: <HomeIconSolid className="h-6 w-6 text-white" />
     },
     {
       id: 'program' as Tab,
       label: 'Programa',
-      icon: <CalendarIcon className="h-6 w-6" />,
-      activeIcon: <CalendarIconSolid className="h-6 w-6" />
+      icon: <CalendarIcon className="h-6 w-6 text-white" />,
+      activeIcon: <CalendarIconSolid className="h-6 w-6 text-white" />
     },
     {
       id: 'exercises' as Tab,
       label: 'Exercícios',
-      icon: <BookOpenIcon className="h-6 w-6" />,
-      activeIcon: <BookOpenIconSolid className="h-6 w-6" />
+      icon: <BookOpenIcon className="h-6 w-6 text-white" />,
+      activeIcon: <BookOpenIconSolid className="h-6 w-6 text-white" />
     },
     {
       id: 'nutrition' as Tab,
       label: 'Nutrição',
-      icon: <BeakerIcon className="h-6 w-6" />,
-      activeIcon: <BeakerIconSolid className="h-6 w-6" />
+      icon: <BeakerIcon className="h-6 w-6 text-white" />,
+      activeIcon: <BeakerIconSolid className="h-6 w-6 text-white" />
     },
     {
       id: 'meditation' as Tab,
       label: 'Meditação',
-      icon: <HeartIcon className="h-6 w-6" />,
-      activeIcon: <HeartIconSolid className="h-6 w-6" />
+      icon: <HeartIcon className="h-6 w-6 text-white" />,
+      activeIcon: <HeartIconSolid className="h-6 w-6 text-white" />
     },
     {
       id: 'recipes' as Tab,
       label: 'Receitas',
-      icon: <Squares2X2Icon className="h-6 w-6" />,
-      activeIcon: <Squares2X2IconSolid className="h-6 w-6" />
+      icon: <Squares2X2Icon className="h-6 w-6 text-white" />,
+      activeIcon: <Squares2X2IconSolid className="h-6 w-6 text-white" />
     },
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-gray-100 px-4 py-2 z-50">
+    <div className="fixed bottom-0 left-0 right-0 bg-purple-600 border-t border-purple-700 px-4 py-2 z-50 shadow-md">
       <div className="max-w-md mx-auto flex justify-between">
         {tabs.map((tab) => {
           const isActive = currentView === tab.id;
@@ -75,16 +75,16 @@ const Navigation: React.FC<NavigationProps> = ({ currentView, onTabChange }) => 
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              className={`flex flex-col items-center py-2 px-1 rounded-lg transition-colors ${
+              className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${
                 isActive 
-                  ? 'text-purple-600' 
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'text-white bg-purple-800' 
+                  : 'text-white hover:bg-purple-700'
               }`}
             >
               <div className={`relative ${isActive ? 'mb-0.5' : ''}`}>
                 {isActive ? tab.activeIcon : tab.icon}
               </div>
-              <span className={`text-xs mt-1 ${isActive ? 'font-medium' : ''}`}>
+              <span className={`text-xs mt-1 text-white ${isActive ? 'font-medium' : ''}`}>
                 {tab.label}
               </span>
             </button>

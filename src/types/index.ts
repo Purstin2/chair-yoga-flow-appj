@@ -39,6 +39,8 @@ export interface DailyCheckin {
   energy: string;
   mood: string;
   exercises: string[];
+  difficulty?: 'easy' | 'challenging' | 'hard';
+  notes?: string;
 }
 
 export interface UserQuizData {
@@ -49,6 +51,11 @@ export interface UserQuizData {
   healthConditions: string[];
   medication: boolean;
   previousInjury: boolean;
+  currentPainLevel?: number;
+  medications?: string[];
+  recentSurgeries?: boolean;
+  surgeryDetails?: string;
+  sleepQuality?: string;
 }
 
 export interface Exercise {
@@ -81,8 +88,27 @@ export interface Exercise {
   audioInstructions?: string[]; // Audio instructions for each step
   hasWarning?: boolean; // If exercise needs special medical warning
   warningText?: string; // Specific warning text
-  scientificData?: ExerciseScientificData; // New scientific data
+  scientificData?: ExerciseScientificData; // Scientific data
   executionSteps?: { step: number; instruction: string; duration: number }[]; // Detailed step-by-step with timing
+  targetArea?: string; // Primary target area (e.g., "C1-C7, Suboccipitais")
+  contraindications?: string[]; // Specific contraindications
+  scientificBasis?: string[]; // Scientific research basis
+  modifications?: {
+    pain: string;
+    tired: string;
+    energized: string;
+  };
+  evidenceLevel?: 'A' | 'B' | 'C'; // Evidence level (A: strongest, C: limited)
+}
+
+export interface ExerciseProgress {
+  exerciseId: number;
+  completedAt: string;
+  painBefore: number; // 1-10
+  painAfter: number;  // 1-10
+  difficulty: 'easy' | 'challenging' | 'hard';
+  notes?: string;
+  skippedSteps?: number[];
 }
 
 export interface Recipe {

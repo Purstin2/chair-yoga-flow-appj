@@ -16,16 +16,24 @@ import {
   BeakerIcon,
   ShieldExclamationIcon,
   ArrowPathRoundedSquareIcon,
-  AdjustmentsHorizontalIcon
-} from '@heroicons/react/24/solid';
+  AdjustmentsHorizontalIcon,
+  BookmarkIcon,
+  LightBulbIcon
+} from '@heroicons/react/24/outline';
+import { 
+  FiActivity, FiHeart, FiAward, FiRotateCcw, 
+  FiRefreshCw, FiSmile, FiSun, FiMoon, FiMove, FiWind,
+  FiTarget, FiList, FiAlertTriangle, FiBarChart2, FiCheckCircle
+} from 'react-icons/fi';
 import { Exercise } from '@/types';
 import { formatTime } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 import Header from './Header';
 import ExerciseTimer from './ExerciseTimer';
 import ConfettiEffect from './ConfettiEffect';
-import PainFeedbackForm, { PainFeedbackData } from './PainFeedbackForm';
 import ErrorBoundary from './ErrorBoundary';
+import ExerciseScreen from './ExerciseScreen';
+import { getCategoryColor, getCategoryIcon, IconType } from '@/data/exerciseCategories';
 
 interface ExerciseDetailProps {
   exercise: Exercise;
@@ -48,11 +56,42 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
   const [completed, setCompleted] = useState(isCompleted);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showTrainingMode, setShowTrainingMode] = useState(false);
-  const [showingFeedbackForm, setShowingFeedbackForm] = useState(true);
-  const [exerciseReady, setExerciseReady] = useState(false);
   const [showStepByStepMode, setShowStepByStepMode] = useState(false);
+  const [showAutoMode, setShowAutoMode] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const stepsRef = useRef<HTMLDivElement>(null);
+
+  // Get category color and icon
+  const categoryColor = getCategoryColor(exercise.category);
+  const categoryIconType = getCategoryIcon(exercise.category);
+
+  // Function to get category icon based on type
+  const getCategoryIconComponent = (iconType: IconType) => {
+    switch (iconType) {
+      case 'activity':
+        return <FiActivity className="h-5 w-5" />;
+      case 'move':
+        return <FiMove className="h-5 w-5" />;
+      case 'rotate':
+        return <FiRotateCcw className="h-5 w-5" />;
+      case 'refresh':
+        return <FiRefreshCw className="h-5 w-5" />;
+      case 'award':
+        return <FiAward className="h-5 w-5" />;
+      case 'moon':
+        return <FiMoon className="h-5 w-5" />;
+      case 'smile':
+        return <FiSmile className="h-5 w-5" />;
+      case 'heart':
+        return <FiHeart className="h-5 w-5" />;
+      case 'sun':
+        return <FiSun className="h-5 w-5" />;
+      case 'wind':
+        return <FiWind className="h-5 w-5" />;
+      default:
+        return <FiActivity className="h-5 w-5" />;
+    }
+  };
 
   // Scroll to the current step when it changes
   useEffect(() => {
@@ -88,17 +127,20 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
 
   const toggleTrainingMode = () => {
     setShowTrainingMode(!showTrainingMode);
+    setShowStepByStepMode(false);
+    setShowAutoMode(false);
   };
 
   const toggleStepByStepMode = () => {
     setShowStepByStepMode(!showStepByStepMode);
+    setShowTrainingMode(false);
+    setShowAutoMode(false);
   };
 
-  const handleFeedbackComplete = (feedbackData: PainFeedbackData) => {
-    // In production, we would save this data
-    console.log('Pre-exercise feedback:', feedbackData);
-    setShowingFeedbackForm(false);
-    setExerciseReady(true);
+  const toggleAutoMode = () => {
+    setShowAutoMode(!showAutoMode);
+    setShowTrainingMode(false);
+    setShowStepByStepMode(false);
   };
 
   const speakInstruction = (text: string) => {
@@ -121,39 +163,52 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
     // Otherwise use the specified duration in minutes
     return parseInt(exercise.duration || '3') * 60;
   };
-  
-  // If showing the pre-exercise feedback form
-  if (showingFeedbackForm) {
+
+  // Auto navigation mode (completely hands-free)
+  if (showAutoMode) {
     return (
-      <ErrorBoundary fallback={<div>Erro ao carregar formulário. Por favor reinicie o app.</div>}>
-        <PainFeedbackForm 
-          isPreSession={true} 
-          onComplete={handleFeedbackComplete}
-        />
-      </ErrorBoundary>
+      <ExerciseScreen
+        exercise={exercise}
+        onComplete={onComplete}
+        onBack={() => setShowAutoMode(false)}
+      />
     );
   }
-
+  
   // Training mode (simplified view)
   if (showTrainingMode) {
     return (
       <div className="fixed inset-0 bg-white flex flex-col">
-        <div className="bg-purple-100 p-4 flex items-center justify-between">
+        <div className="bg-purple-600 p-4 flex items-center justify-between">
           <button 
             onClick={toggleTrainingMode}
-            className="p-2 rounded-full bg-white"
+            className="p-2 rounded-full bg-purple-500"
             aria-label="Sair do modo treino"
           >
-            <ArrowLeftIcon className="h-5 w-5 text-gray-700" />
+            <ArrowLeftIcon className="h-5 w-5 text-white" />
           </button>
-          <h2 className="text-lg font-bold text-purple-900">{exercise.name}</h2>
+          <h2 className="text-lg font-bold text-white">{exercise.name}</h2>
           <div className="w-10" /> {/* Spacer to center the title */}
         </div>
         
         <div className="flex-1 flex flex-col items-center justify-center p-6">
-          <div className="text-7xl mb-8" aria-label={`Ícone de ${exercise.name}`}>
-            {exercise.icon}
-          </div>
+          {exercise.photoUrl ? (
+            <div className="w-64 h-64 rounded-full mb-8 overflow-hidden">
+              <img 
+                src={exercise.photoUrl} 
+                alt={exercise.name} 
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ) : (
+            <div className="w-64 h-64 rounded-full mb-8 overflow-hidden bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
+              <img 
+                src={`https://source.unsplash.com/random/400x400/?yoga,${exercise.category.toLowerCase()},exercise`} 
+                alt={exercise.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
           
           <ExerciseTimer 
             initialDuration={calculateDuration()}
@@ -216,22 +271,36 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
   if (showStepByStepMode) {
     return (
       <div className="fixed inset-0 bg-white z-50 flex flex-col">
-        <div className="bg-purple-100 p-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-purple-900">{exercise.name}</h2>
+        <div className="bg-purple-600 p-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-white">{exercise.name}</h2>
           <button 
             onClick={toggleStepByStepMode}
-            className="p-2 rounded-full bg-white"
+            className="p-2 rounded-full bg-purple-500"
             aria-label="Fechar modo passo a passo"
           >
-            <ArrowLeftIcon className="h-6 w-6 text-gray-700" />
+            <ArrowLeftIcon className="h-6 w-6 text-white" />
           </button>
         </div>
         
         <div className="flex-1 p-6 flex flex-col items-center justify-center">
-          <div className="text-5xl mb-6" aria-label={`Ícone de ${exercise.name}`}>
-            {exercise.icon}
-          </div>
-          
+          {exercise.photoUrl ? (
+            <div className="w-48 h-48 rounded-lg mb-6 overflow-hidden">
+              <img 
+                src={exercise.photoUrl} 
+                alt={exercise.name} 
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ) : (
+            <div className="w-48 h-48 rounded-lg mb-6 overflow-hidden bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
+              <img 
+                src={`https://source.unsplash.com/random/300x300/?yoga,${exercise.category.toLowerCase()},exercise`} 
+                alt={exercise.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+
           <h3 className="text-2xl font-bold text-gray-900 mb-4 text-center">
             Passo {currentStep + 1} de {hasDetailedExecution && exercise.executionSteps
               ? exercise.executionSteps.length
@@ -258,7 +327,7 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
             </div>
           )}
         </div>
-        
+            
         <div className="bg-gray-100 p-4 flex justify-around">
           <button
             onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
@@ -278,7 +347,7 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
           >
             <SpeakerWaveIcon className="h-6 w-6 text-purple-700" />
           </button>
-          
+              
           <button
             onClick={() => setCurrentStep(prev => Math.min(
               (hasDetailedExecution && exercise.executionSteps 
@@ -312,22 +381,21 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
 
       <div className="px-4 max-w-md mx-auto">
         {/* Exercise Photo */}
-        <div className="aspect-square overflow-hidden rounded-2xl mb-4 bg-gray-100 flex items-center justify-center relative">
+        <div className="aspect-video overflow-hidden rounded-2xl mb-4 bg-gray-100 flex items-center justify-center relative">
           {exercise.photoUrl ? (
             <img 
               src={exercise.photoUrl} 
-              alt={`Mulher fazendo ${exercise.name}`} 
+              alt={`Demonstração de ${exercise.name}`} 
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="flex flex-col items-center">
-              <span className="text-8xl mb-4" aria-label={`Ícone de ${exercise.name}`}>
-                {exercise.icon}
-              </span>
-              <p className="text-gray-500 text-sm">Imagem ilustrativa</p>
-            </div>
+            <img 
+              src={`https://source.unsplash.com/random/800x600/?yoga,${exercise.category.toLowerCase()},exercise`} 
+              alt={`Demonstração de ${exercise.name}`}
+              className="w-full h-full object-cover"
+            />
           )}
-          
+
           {/* Badges overlay */}
           <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2">
             <span className="px-2 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-medium text-gray-700 shadow-sm flex items-center">
@@ -335,14 +403,21 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
               {exercise.duration} minutos
             </span>
             <span className="px-2 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-medium text-gray-700 shadow-sm flex items-center">
-              {exercise.difficulty === 'Fácil' ? '🟢' : '🟠'} {exercise.difficulty}
+              {exercise.difficulty === 'Fácil' ? 
+                <span className="h-2 w-2 bg-green-500 rounded-full mr-1"></span> : 
+                <span className="h-2 w-2 bg-orange-500 rounded-full mr-1"></span>
+              } 
+              {exercise.difficulty}
             </span>
             <span className="px-2 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-medium text-gray-700 shadow-sm flex items-center">
-              {getCategoryEmoji(exercise.category)} {exercise.category}
+              <span className="mr-1 text-purple-500">
+                {getCategoryIconComponent(categoryIconType)}
+              </span>
+              {exercise.category}
             </span>
           </div>
         </div>
-
+          
         {/* Timer Card */}
         <Card variant="default" size="md" className="mb-4">
           <CardHeader>
@@ -363,23 +438,32 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
             
             <div className="grid grid-cols-2 gap-3 mt-6">
               <button
-                onClick={toggleTrainingMode}
+                onClick={toggleAutoMode}
                 className="py-2.5 bg-purple-600 text-white rounded-lg font-medium flex items-center justify-center"
-                aria-label="Ativar modo treino simplificado"
+                aria-label="Ativar navegação automática"
               >
                 <BoltIcon className="h-5 w-5 mr-2" />
+                Modo Automático
+              </button>
+          
+              <button
+                onClick={toggleTrainingMode}
+                className="py-2.5 bg-white border border-purple-300 text-purple-700 rounded-lg font-medium flex items-center justify-center"
+                aria-label="Ativar modo treino simplificado"
+              >
+                <FiActivity className="h-5 w-5 mr-2" />
                 Modo Treino
               </button>
-              
-              <button
-                onClick={toggleStepByStepMode}
-                className="py-2.5 bg-white border border-purple-300 text-purple-700 rounded-lg font-medium flex items-center justify-center"
-                aria-label="Ver instruções passo a passo"
-              >
-                <ArrowPathRoundedSquareIcon className="h-5 w-5 mr-2" />
-                Passo a Passo
-              </button>
             </div>
+            
+            <button
+              onClick={toggleStepByStepMode}
+              className="w-full py-2.5 mt-3 bg-white border border-purple-300 text-purple-700 rounded-lg font-medium flex items-center justify-center"
+              aria-label="Ver instruções passo a passo"
+            >
+              <ArrowPathRoundedSquareIcon className="h-5 w-5 mr-2" />
+              Passo a Passo
+            </button>
           </CardContent>
         </Card>
 
@@ -387,7 +471,7 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
         <Card variant="default" size="md" className="mb-4">
           <CardHeader>
             <CardTitle className="flex items-center">
-              <span className="mr-2">🎯</span>
+              <FiTarget className="h-5 w-5 mr-2 text-purple-600" />
               PARA QUE SERVE:
             </CardTitle>
           </CardHeader>
@@ -427,7 +511,7 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
           <Card variant="default" size="md" className="mb-4">
             <CardHeader>
               <CardTitle className="flex items-center">
-                <span className="mr-2">📋</span>
+                <FiList className="h-5 w-5 mr-2 text-purple-600" />
                 EXECUÇÃO PASSO A PASSO:
               </CardTitle>
             </CardHeader>
@@ -466,7 +550,7 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
         <Card variant="default" size="md" className="mb-4">
           <CardHeader>
             <CardTitle className="flex items-center">
-              <span className="mr-2">⚠️</span>
+              <FiAlertTriangle className="h-5 w-5 mr-2 text-yellow-500" />
               CUIDADOS:
             </CardTitle>
           </CardHeader>
@@ -507,7 +591,7 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
             {exercise.specialTip && (
               <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <h4 className="font-medium text-blue-700 mb-1 flex items-center">
-                  <span className="mr-2">💡</span>
+                  <LightBulbIcon className="h-5 w-5 mr-2" />
                   DICA ESPECIAL:
                 </h4>
                 <p className="text-gray-700 text-sm">{exercise.specialTip}</p>
@@ -616,7 +700,7 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
               className="flex-1 py-3 bg-green-600 text-white rounded-xl font-medium flex items-center justify-center gap-2 cursor-default"
               disabled
             >
-              <CheckIcon className="h-5 w-5" />
+              <FiCheckCircle className="h-5 w-5" />
               EXERCÍCIO CONCLUÍDO
             </button>
           )}
@@ -625,7 +709,7 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
             className="py-3 px-4 bg-white border border-purple-300 text-purple-700 rounded-xl font-medium hover:bg-purple-50 transition-colors flex items-center"
             aria-label="Ver resultados"
           >
-            <ChartBarIcon className="h-5 w-5 mr-2" />
+            <FiBarChart2 className="h-5 w-5 mr-2" />
             RESULTADOS
           </button>
         </div>
@@ -636,23 +720,5 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
     </div>
   );
 };
-
-// Function to get emoji based on category
-function getCategoryEmoji(category: string): string {
-  const emojiMap: Record<string, string> = {
-    'Respiração': '🫁',
-    'Respiração Terapêutica': '🫁',
-    'Mobilidade': '🤸',
-    'Mobilidade Geral': '🤸',
-    'Alongamento': '🧘‍♀️',
-    'Fortalecimento': '💪',
-    'Meditação': '🧠',
-    'Relaxamento': '😌',
-    'Alívio Cervical': '💆‍♀️',
-    'Liberação Lombar': '🔄'
-  };
-  
-  return emojiMap[category] || '🧘‍♀️';
-}
 
 export default ExerciseDetail;
