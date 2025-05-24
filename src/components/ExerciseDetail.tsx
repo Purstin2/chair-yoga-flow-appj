@@ -12,13 +12,20 @@ import {
   BoltIcon,
   ChevronRightIcon,
   ChartBarIcon,
-  InformationCircleIcon
+  InformationCircleIcon,
+  BeakerIcon,
+  ShieldExclamationIcon,
+  ArrowPathRoundedSquareIcon,
+  AdjustmentsHorizontalIcon
 } from '@heroicons/react/24/solid';
 import { Exercise } from '@/types';
 import { formatTime } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 import Header from './Header';
+import ExerciseTimer from './ExerciseTimer';
+import ConfettiEffect from './ConfettiEffect';
 import PainFeedbackForm, { PainFeedbackData } from './PainFeedbackForm';
+import ErrorBoundary from './ErrorBoundary';
 
 interface ExerciseDetailProps {
   exercise: Exercise;
@@ -38,74 +45,16 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
   onProfileClick
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(parseInt(exercise.duration || '3') * 60);
-  const [isRunning, setIsRunning] = useState(false);
   const [completed, setCompleted] = useState(isCompleted);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [autoAdvance, setAutoAdvance] = useState(false);
-  const [stepDuration] = useState(30); // Cada passo dura 30 segundos por padrão
-  const [stepTimeRemaining, setStepTimeRemaining] = useState(stepDuration);
-  const [isBigViewMode, setIsBigViewMode] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [showTrainingMode, setShowTrainingMode] = useState(false);
   const [showingFeedbackForm, setShowingFeedbackForm] = useState(true);
   const [exerciseReady, setExerciseReady] = useState(false);
-  const [showTrainingMode, setShowTrainingMode] = useState(false);
-  const timerRef = useRef<number | null>(null);
-  const stepTimerRef = useRef<number | null>(null);
+  const [showStepByStepMode, setShowStepByStepMode] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
   const stepsRef = useRef<HTMLDivElement>(null);
-  const beepSoundRef = useRef<HTMLAudioElement | null>(null);
-  const completeSoundRef = useRef<HTMLAudioElement | null>(null);
 
-  // Criar referências para os sons
-  useEffect(() => {
-    beepSoundRef.current = new Audio('/beep.mp3'); // Assuma que você tenha esses arquivos
-    completeSoundRef.current = new Audio('/complete.mp3');
-    
-    // Função para descarregar os sons quando o componente for desmontado
-    return () => {
-      if (beepSoundRef.current) {
-        beepSoundRef.current.pause();
-        beepSoundRef.current = null;
-      }
-      if (completeSoundRef.current) {
-        completeSoundRef.current.pause();
-        completeSoundRef.current = null;
-      }
-    };
-  }, []);
-
-  // Parar o timer ao desmontar o componente
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-      if (stepTimerRef.current) {
-        clearInterval(stepTimerRef.current);
-      }
-    };
-  }, []);
-
-  // Salvar estado do timer no localStorage para persistência
-  useEffect(() => {
-    const savedTimer = localStorage.getItem(`exercise_timer_${exercise.id}`);
-    if (savedTimer) {
-      const timerData = JSON.parse(savedTimer);
-      setTimeLeft(timerData.timeLeft);
-      setIsRunning(false); // Sempre começa pausado ao retornar
-    }
-
-    // Atualizar localStorage quando o timer mudar
-    if (timeLeft > 0) {
-      localStorage.setItem(`exercise_timer_${exercise.id}`, JSON.stringify({
-        exerciseId: exercise.id,
-        timeLeft,
-        timestamp: new Date().getTime()
-      }));
-    }
-  }, [timeLeft, exercise.id]);
-
-  // Scroll para o passo atual quando ele muda
+  // Scroll to the current step when it changes
   useEffect(() => {
     if (stepsRef.current) {
       const activeStep = stepsRef.current.querySelector(`.step-${currentStep}`);
@@ -113,123 +62,18 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
         activeStep.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }
-    // Resetar o tempo do passo quando mudar de passo
-    if (autoAdvance) {
-      setStepTimeRemaining(stepDuration);
-    }
-  }, [currentStep, stepDuration, autoAdvance]);
+  }, [currentStep]);
 
-  // Avançar automaticamente os passos quando autoAdvance estiver ativo
-  useEffect(() => {
-    if (autoAdvance && isRunning) {
-      if (stepTimerRef.current) {
-        clearInterval(stepTimerRef.current);
-      }
-      
-      stepTimerRef.current = window.setInterval(() => {
-        setStepTimeRemaining(prev => {
-          if (prev <= 1) {
-            // Avançar para o próximo passo quando o tempo acabar
-            if (currentStep < exercise.instructions.length - 1) {
-              setCurrentStep(prev => prev + 1);
-              return stepDuration;
-            } else {
-              // Último passo concluído
-              clearInterval(stepTimerRef.current as number);
-              return 0;
-            }
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else if (stepTimerRef.current) {
-      clearInterval(stepTimerRef.current);
-    }
-    
-    return () => {
-      if (stepTimerRef.current) {
-        clearInterval(stepTimerRef.current);
-      }
-    };
-  }, [autoAdvance, isRunning, currentStep, exercise.instructions.length, stepDuration]);
-
-  // Timer principal
-  useEffect(() => {
-    if (isRunning) {
-      timerRef.current = window.setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current as number);
-            setIsRunning(false);
-            handleTimerComplete();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, [isRunning]);
-
-  // Função para lidar com a conclusão do timer
   const handleTimerComplete = () => {
-    if (soundEnabled && completeSoundRef.current) {
-      completeSoundRef.current.play();
-    }
-    
-    // Vibrar o dispositivo se suportado
-    if ('vibrate' in navigator) {
-      navigator.vibrate([200, 100, 200]);
-    }
-    
-    // Mostra confetti e marca como concluído
+    // Show confetti and mark as completed
     setShowConfetti(true);
     setCompleted(true);
     
-    // Esconder confetti após 3 segundos
+    // Notify parent
     setTimeout(() => {
+      onComplete();
       setShowConfetti(false);
     }, 3000);
-  };
-
-  const startTimer = () => {
-    if (soundEnabled && beepSoundRef.current) {
-      beepSoundRef.current.play();
-    }
-    setIsRunning(true);
-  };
-
-  const pauseTimer = () => {
-    setIsRunning(false);
-  };
-
-  const stopTimer = () => {
-    pauseTimer();
-    // Opção para não resetar para permitir continuar de onde parou
-    // setTimeLeft(parseInt(exercise.duration || '3') * 60);
-  };
-
-  const resetTimer = () => {
-    pauseTimer();
-    setTimeLeft(parseInt(exercise.duration || '3') * 60);
-    setStepTimeRemaining(stepDuration);
-    setCurrentStep(0);
-  };
-
-  const toggleAutoAdvance = () => {
-    setAutoAdvance(!autoAdvance);
-    setStepTimeRemaining(stepDuration);
-  };
-
-  const toggleSound = () => {
-    setSoundEnabled(!soundEnabled);
   };
 
   const handleComplete = () => {
@@ -237,23 +81,24 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
     setShowConfetti(true);
     onComplete();
     
-    // Esconder confetti após 3 segundos
     setTimeout(() => {
       setShowConfetti(false);
     }, 3000);
   };
 
-  const getTimerProgress = () => {
-    const totalSeconds = parseInt(exercise.duration || '3') * 60;
-    return (timeLeft / totalSeconds) * 100;
+  const toggleTrainingMode = () => {
+    setShowTrainingMode(!showTrainingMode);
   };
 
-  const getStepProgress = () => {
-    return ((currentStep + 1) / exercise.instructions.length) * 100;
+  const toggleStepByStepMode = () => {
+    setShowStepByStepMode(!showStepByStepMode);
   };
 
-  const getStepTimeProgress = () => {
-    return (stepTimeRemaining / stepDuration) * 100;
+  const handleFeedbackComplete = (feedbackData: PainFeedbackData) => {
+    // In production, we would save this data
+    console.log('Pre-exercise feedback:', feedbackData);
+    setShowingFeedbackForm(false);
+    setExerciseReady(true);
   };
 
   const speakInstruction = (text: string) => {
@@ -264,28 +109,32 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
     }
   };
 
-  const handleFeedbackComplete = (feedbackData: PainFeedbackData) => {
-    // Em produção, salvaríamos estes dados
-    console.log('Pre-exercise feedback:', feedbackData);
-    setShowingFeedbackForm(false);
-    setExerciseReady(true);
-  };
+  // Determine if the exercise has step-by-step execution info
+  const hasDetailedExecution = exercise.executionSteps && exercise.executionSteps.length > 0;
 
-  const toggleTrainingMode = () => {
-    setShowTrainingMode(!showTrainingMode);
+  // Calculate total exercise duration in seconds
+  const calculateDuration = () => {
+    // If using executionSteps, calculate from those
+    if (hasDetailedExecution && exercise.executionSteps) {
+      return exercise.executionSteps.reduce((total, step) => total + step.duration, 0);
+    }
+    // Otherwise use the specified duration in minutes
+    return parseInt(exercise.duration || '3') * 60;
   };
-
-  // Se estiver mostrando o formulário de feedback pré-exercício
+  
+  // If showing the pre-exercise feedback form
   if (showingFeedbackForm) {
     return (
-      <PainFeedbackForm 
-        isPreSession={true} 
-        onComplete={handleFeedbackComplete}
-      />
+      <ErrorBoundary fallback={<div>Erro ao carregar formulário. Por favor reinicie o app.</div>}>
+        <PainFeedbackForm 
+          isPreSession={true} 
+          onComplete={handleFeedbackComplete}
+        />
+      </ErrorBoundary>
     );
   }
 
-  // Se estiver no modo de treino simplificado
+  // Training mode (simplified view)
   if (showTrainingMode) {
     return (
       <div className="fixed inset-0 bg-white flex flex-col">
@@ -293,92 +142,164 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
           <button 
             onClick={toggleTrainingMode}
             className="p-2 rounded-full bg-white"
+            aria-label="Sair do modo treino"
           >
             <ArrowLeftIcon className="h-5 w-5 text-gray-700" />
           </button>
           <h2 className="text-lg font-bold text-purple-900">{exercise.name}</h2>
-          <div className="w-10" /> {/* Espaçador para centralizar o título */}
+          <div className="w-10" /> {/* Spacer to center the title */}
         </div>
         
         <div className="flex-1 flex flex-col items-center justify-center p-6">
-          <div className="text-7xl mb-8">{exercise.icon}</div>
-          
-          <div className="relative w-40 h-40 rounded-full border-8 border-purple-100 mb-8 flex items-center justify-center">
-            <div 
-              className="absolute inset-0 rounded-full border-8 border-purple-600"
-              style={{ 
-                clipPath: `polygon(0% 0%, ${getTimerProgress()}% 0%, ${getTimerProgress()}% 100%, 0% 100%)`,
-                borderRadius: '50%'
-              }}
-            />
-            <span className="text-3xl font-bold text-gray-900">
-              {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
-            </span>
+          <div className="text-7xl mb-8" aria-label={`Ícone de ${exercise.name}`}>
+            {exercise.icon}
           </div>
           
-          <div className="text-center mb-10">
+          <ExerciseTimer 
+            initialDuration={calculateDuration()}
+            onComplete={handleTimerComplete}
+            autoStart={false}
+          />
+          
+          <div className="text-center mb-10 mt-8">
             <p className="text-xl text-gray-900 mb-3">
-              {exercise.instructions[currentStep]}
+              {hasDetailedExecution && exercise.executionSteps 
+                ? exercise.executionSteps[currentStep]?.instruction
+                : exercise.instructions[currentStep]}
             </p>
-            {autoAdvance && (
-              <p className="text-gray-600">{stepTimeRemaining}...</p>
-            )}
           </div>
           
           <div className="flex justify-center space-x-6">
-            {isRunning ? (
-              <button
-                onClick={pauseTimer}
-                className="w-14 h-14 bg-gray-600 rounded-full flex items-center justify-center text-white shadow-lg"
-              >
-                <PauseIcon className="h-7 w-7" />
-              </button>
-            ) : (
-              <button
-                onClick={startTimer}
-                className="w-14 h-14 bg-purple-600 rounded-full flex items-center justify-center text-white shadow-lg"
-              >
-                <PlayIcon className="h-7 w-7" />
-              </button>
-            )}
-            
             <button
-              onClick={stopTimer}
-              className="w-14 h-14 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 shadow"
+              onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
+              disabled={currentStep === 0}
+              className="w-14 h-14 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 shadow disabled:opacity-50"
+              aria-label="Passo anterior"
             >
-              <StopIcon className="h-7 w-7" />
+              <ArrowLeftIcon className="h-7 w-7" />
             </button>
             
             <button
-              onClick={() => setCurrentStep(prev => Math.min(exercise.instructions.length - 1, prev + 1))}
-              className="w-14 h-14 bg-purple-100 rounded-full flex items-center justify-center text-purple-700 shadow"
+              onClick={() => speakInstruction(hasDetailedExecution && exercise.executionSteps 
+                ? exercise.executionSteps[currentStep]?.instruction
+                : exercise.instructions[currentStep])}
+              className="w-14 h-14 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 shadow"
+              aria-label="Ouvir instrução"
+            >
+              <SpeakerWaveIcon className="h-7 w-7" />
+            </button>
+            
+            <button
+              onClick={() => setCurrentStep(prev => Math.min(
+                (hasDetailedExecution && exercise.executionSteps 
+                  ? exercise.executionSteps.length 
+                  : exercise.instructions.length) - 1, 
+                prev + 1
+              ))}
+              disabled={currentStep === (hasDetailedExecution && exercise.executionSteps 
+                ? exercise.executionSteps.length 
+                : exercise.instructions.length) - 1}
+              className="w-14 h-14 bg-purple-100 rounded-full flex items-center justify-center text-purple-700 shadow disabled:opacity-50"
+              aria-label="Próximo passo"
             >
               <ChevronRightIcon className="h-7 w-7" />
             </button>
-            
-            <button
-              onClick={toggleSound}
-              className="w-14 h-14 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 shadow"
-            >
-              {soundEnabled ? (
-                <SpeakerWaveIcon className="h-7 w-7" />
-              ) : (
-                <SpeakerXMarkIcon className="h-7 w-7" />
-              )}
-            </button>
+          </div>
+        </div>
+        
+        <ConfettiEffect active={showConfetti} />
+      </div>
+    );
+  }
+
+  // Step-by-step mode
+  if (showStepByStepMode) {
+    return (
+      <div className="fixed inset-0 bg-white z-50 flex flex-col">
+        <div className="bg-purple-100 p-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-purple-900">{exercise.name}</h2>
+          <button 
+            onClick={toggleStepByStepMode}
+            className="p-2 rounded-full bg-white"
+            aria-label="Fechar modo passo a passo"
+          >
+            <ArrowLeftIcon className="h-6 w-6 text-gray-700" />
+          </button>
+        </div>
+        
+        <div className="flex-1 p-6 flex flex-col items-center justify-center">
+          <div className="text-5xl mb-6" aria-label={`Ícone de ${exercise.name}`}>
+            {exercise.icon}
           </div>
           
-          <div className="absolute bottom-8 left-0 right-0 flex items-center justify-center">
-            <p className="text-sm text-gray-600">
-              Exercício {currentStep + 1} de {exercise.instructions.length} • 
-              Faltam {Math.ceil(timeLeft / 60)} minutos
-            </p>
-          </div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-4 text-center">
+            Passo {currentStep + 1} de {hasDetailedExecution && exercise.executionSteps
+              ? exercise.executionSteps.length
+              : exercise.instructions.length}
+          </h3>
+          
+          <p className="text-xl text-center text-gray-700 mb-8">
+            {hasDetailedExecution && exercise.executionSteps
+              ? exercise.executionSteps[currentStep]?.instruction
+              : exercise.instructions[currentStep]}
+          </p>
+          
+          {hasDetailedExecution && exercise.executionSteps && (
+            <div className="mb-8 w-full max-w-sm">
+              <p className="text-center text-gray-600 mb-2">
+                Duração: {exercise.executionSteps[currentStep]?.duration} segundos
+              </p>
+              <div className="w-full bg-gray-200 rounded-full h-4">
+                <div 
+                  className="h-4 rounded-full bg-purple-600 transition-all duration-500 ease-in-out"
+                  style={{ width: '0%' }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <div className="bg-gray-100 p-4 flex justify-around">
+          <button
+            onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
+            disabled={currentStep === 0}
+            className="p-3 rounded-full bg-white shadow disabled:opacity-50"
+            aria-label="Passo anterior"
+          >
+            <ArrowLeftIcon className="h-6 w-6 text-purple-700" />
+          </button>
+          
+          <button
+            onClick={() => speakInstruction(hasDetailedExecution && exercise.executionSteps
+              ? exercise.executionSteps[currentStep]?.instruction
+              : exercise.instructions[currentStep])}
+            className="p-3 rounded-full bg-white shadow"
+            aria-label="Ouvir instrução"
+          >
+            <SpeakerWaveIcon className="h-6 w-6 text-purple-700" />
+          </button>
+          
+          <button
+            onClick={() => setCurrentStep(prev => Math.min(
+              (hasDetailedExecution && exercise.executionSteps 
+                ? exercise.executionSteps.length 
+                : exercise.instructions.length) - 1, 
+              prev + 1
+            ))}
+            disabled={currentStep === (hasDetailedExecution && exercise.executionSteps 
+              ? exercise.executionSteps.length 
+              : exercise.instructions.length) - 1}
+            className="p-3 rounded-full bg-white shadow disabled:opacity-50"
+            aria-label="Próximo passo"
+          >
+            <ChevronRightIcon className="h-6 w-6 text-purple-700" />
+          </button>
         </div>
       </div>
     );
   }
 
+  // Main exercise detail view
   return (
     <div className="min-h-screen bg-white pb-20">
       <Header 
@@ -400,7 +321,9 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
             />
           ) : (
             <div className="flex flex-col items-center">
-              <span className="text-8xl mb-4">{exercise.icon}</span>
+              <span className="text-8xl mb-4" aria-label={`Ícone de ${exercise.name}`}>
+                {exercise.icon}
+              </span>
               <p className="text-gray-500 text-sm">Imagem ilustrativa</p>
             </div>
           )}
@@ -423,97 +346,44 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
         {/* Timer Card */}
         <Card variant="default" size="md" className="mb-4">
           <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle>Timer</CardTitle>
-              <span className="text-gray-600 font-medium">
-                {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
-              </span>
-            </div>
+            <CardTitle>Seu momento de autocuidado</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="relative w-full h-4 bg-gray-100 rounded-full mb-4 overflow-hidden">
-              <div 
-                className="absolute top-0 left-0 h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-300"
-                style={{ width: `${getTimerProgress()}%` }}
-              />
-            </div>
-
-            <div className="flex justify-center space-x-3">
-              {!isRunning ? (
-                <button
-                  onClick={startTimer}
-                  className="bg-purple-600 text-white p-3 rounded-full hover:bg-purple-700 transition-colors shadow-md"
-                >
-                  <PlayIcon className="h-6 w-6" />
-                </button>
-              ) : (
-                <button
-                  onClick={pauseTimer}
-                  className="bg-gray-600 text-white p-3 rounded-full hover:bg-gray-700 transition-colors shadow-md"
-                >
-                  <PauseIcon className="h-6 w-6" />
-                </button>
-              )}
-              
-              <button
-                onClick={stopTimer}
-                className="bg-gray-200 text-gray-700 p-3 rounded-full hover:bg-gray-300 transition-colors"
-              >
-                <StopIcon className="h-6 w-6" />
-              </button>
-              
-              <button
-                onClick={resetTimer}
-                className="bg-gray-200 text-gray-700 p-3 rounded-full hover:bg-gray-300 transition-colors"
-              >
-                <ArrowPathIcon className="h-6 w-6" />
-              </button>
-              
-              <button
-                onClick={toggleSound}
-                className={`p-3 rounded-full transition-colors ${
-                  soundEnabled 
-                    ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' 
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-                title={soundEnabled ? "Desativar som" : "Ativar som"}
-              >
-                {soundEnabled ? (
-                  <SpeakerWaveIcon className="h-6 w-6" />
-                ) : (
-                  <SpeakerXMarkIcon className="h-6 w-6" />
-                )}
-              </button>
-              
-              {timeLeft === 0 && !completed && (
-                <button
-                  onClick={handleComplete}
-                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center shadow-md"
-                >
-                  <CheckIcon className="h-5 w-5 mr-1" />
-                  <span>Concluir</span>
-                </button>
-              )}
-              
-              {completed && (
-                <div className="bg-green-100 text-green-800 px-4 py-2 rounded-lg flex items-center">
-                  <CheckIcon className="h-5 w-5 mr-1" />
-                  <span>Concluído!</span>
-                </div>
-              )}
-            </div>
+            <ExerciseTimer 
+              initialDuration={calculateDuration()}
+              onComplete={handleTimerComplete}
+            />
             
-            <button
-              onClick={toggleTrainingMode}
-              className="w-full mt-4 py-2.5 bg-purple-600 text-white rounded-lg font-medium flex items-center justify-center"
-            >
-              <BoltIcon className="h-5 w-5 mr-2" />
-              Modo Treino Simplificado
-            </button>
+            {completed && (
+              <div className="mt-4 bg-green-100 text-green-800 px-4 py-3 rounded-lg flex items-center justify-center">
+                <CheckIcon className="h-5 w-5 mr-2" />
+                <span className="font-medium">Parabéns! Você investiu em si mesma!</span>
+              </div>
+            )}
+            
+            <div className="grid grid-cols-2 gap-3 mt-6">
+              <button
+                onClick={toggleTrainingMode}
+                className="py-2.5 bg-purple-600 text-white rounded-lg font-medium flex items-center justify-center"
+                aria-label="Ativar modo treino simplificado"
+              >
+                <BoltIcon className="h-5 w-5 mr-2" />
+                Modo Treino
+              </button>
+              
+              <button
+                onClick={toggleStepByStepMode}
+                className="py-2.5 bg-white border border-purple-300 text-purple-700 rounded-lg font-medium flex items-center justify-center"
+                aria-label="Ver instruções passo a passo"
+              >
+                <ArrowPathRoundedSquareIcon className="h-5 w-5 mr-2" />
+                Passo a Passo
+              </button>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Para que serve section */}
+        {/* For What Purpose section */}
         <Card variant="default" size="md" className="mb-4">
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -552,136 +422,47 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
           </CardContent>
         </Card>
 
-        {/* Como fazer section */}
-        <Card variant="default" size="md" className="mb-4">
-          <CardHeader>
-            <div className="flex justify-between items-center">
+        {/* Execution Steps */}
+        {hasDetailedExecution && (
+          <Card variant="default" size="md" className="mb-4">
+            <CardHeader>
               <CardTitle className="flex items-center">
                 <span className="mr-2">📋</span>
-                COMO FAZER:
+                EXECUÇÃO PASSO A PASSO:
               </CardTitle>
-              <span className="text-sm font-medium text-purple-600">
-                {currentStep + 1} / {exercise.instructions.length}
-              </span>
-            </div>
-            
-            <div className="w-full h-1.5 bg-gray-100 rounded-full mt-2">
-              <div 
-                className="h-full bg-purple-600 rounded-full transition-all duration-300"
-                style={{ width: `${getStepProgress()}%` }}
-              />
-            </div>
-            
-            {autoAdvance && (
-              <div className="w-full mt-2 flex items-center justify-between text-xs">
-                <div className="h-1 bg-green-100 rounded-full flex-1 mr-2">
+            </CardHeader>
+            <CardContent>
+              <div ref={stepsRef} className="space-y-4">
+                {exercise.executionSteps?.map((step, index) => (
                   <div 
-                    className="h-1 bg-green-600 rounded-full transition-all duration-1000"
-                    style={{ width: `${getStepTimeProgress()}%` }}
-                  />
-                </div>
-                <span className="text-gray-500">{stepTimeRemaining}s</span>
-              </div>
-            )}
-          </CardHeader>
-          <CardContent>
-            <div className="flex space-x-2 mb-4">
-              <button
-                onClick={toggleAutoAdvance}
-                className={`flex-1 py-2 rounded-lg transition-colors text-sm font-medium ${
-                  autoAdvance 
-                    ? 'bg-green-600 text-white' 
-                    : 'bg-gray-100 text-gray-700'
-                }`}
-              >
-                Auto-avanço {autoAdvance ? 'Ativado' : 'Desativado'}
-              </button>
-              
-              <button 
-                onClick={() => setIsBigViewMode(true)}
-                className="flex-1 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium"
-              >
-                Tela Cheia
-              </button>
-            </div>
-            
-            <div ref={stepsRef} className="space-y-3 max-h-60 overflow-y-auto pb-2 pr-1">
-              {exercise.instructions.map((instruction, index) => (
-                <div 
-                  key={index}
-                  className={`p-3 rounded-xl border transition-all duration-300 step-${index} ${
-                    currentStep === index 
-                      ? 'bg-purple-50 border-purple-200 shadow-sm' 
-                      : index < currentStep
-                        ? 'bg-gray-50 border-gray-200 opacity-70'
-                        : 'bg-white border-gray-100'
-                  }`}
-                >
-                  <div className="flex items-start">
-                    <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center mr-3 ${
-                      index <= currentStep 
-                        ? 'bg-purple-600 text-white' 
-                        : 'bg-gray-200 text-gray-600'
-                    }`}>
-                      {index < currentStep ? (
-                        <CheckIcon className="h-3.5 w-3.5" />
-                      ) : (
-                        <span className="text-xs font-medium">{index + 1}</span>
-                      )}
+                    key={index} 
+                    className={`p-3 rounded-lg border ${
+                      currentStep === index 
+                        ? 'border-purple-300 bg-purple-50' 
+                        : 'border-gray-200'
+                    } step-${index}`}
+                  >
+                    <div className="flex items-center mb-2">
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-2 ${
+                        currentStep === index 
+                          ? 'bg-purple-600 text-white' 
+                          : 'bg-gray-200 text-gray-700'
+                      }`}>
+                        {index + 1}
+                      </div>
+                      <p className="font-medium text-gray-900">{step.instruction}</p>
                     </div>
-                    <div className="flex-1">
-                      <p className={`text-sm ${currentStep === index ? 'text-gray-900 font-medium' : 'text-gray-700'}`}>
-                        {instruction}
-                      </p>
-                      {currentStep === index && (
-                        <button 
-                          onClick={() => speakInstruction(instruction)}
-                          className="mt-2 text-xs flex items-center text-purple-600"
-                        >
-                          <SpeakerWaveIcon className="h-3 w-3 mr-1" />
-                          Ouvir instrução
-                        </button>
-                      )}
-                    </div>
+                    <p className="text-sm text-gray-600 ml-8">
+                      Duração: {step.duration} segundos
+                    </p>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-            <div className="flex justify-between mt-4">
-              <button
-                onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
-                disabled={currentStep === 0}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  currentStep === 0 
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                    : 'bg-white border border-purple-200 text-purple-700 hover:bg-purple-50'
-                }`}
-              >
-                <span className="flex items-center">
-                  <ArrowLeftIcon className="h-4 w-4 mr-1" />
-                  Anterior
-                </span>
-              </button>
-              <button
-                onClick={() => setCurrentStep(prev => Math.min(exercise.instructions.length - 1, prev + 1))}
-                disabled={currentStep === exercise.instructions.length - 1}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  currentStep === exercise.instructions.length - 1 
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                    : 'bg-purple-600 text-white hover:bg-purple-700'
-                }`}
-              >
-                <span className="flex items-center">
-                  Próximo
-                  <ChevronRightIcon className="h-4 w-4 ml-1" />
-                </span>
-              </button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Cuidados section */}
+        {/* Precautions section */}
         <Card variant="default" size="md" className="mb-4">
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -735,133 +516,140 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
           </CardContent>
         </Card>
 
+        {/* Scientific Data Section */}
+        {exercise.scientificData && (
+          <Card variant="default" size="md" className="mb-4">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <BeakerIcon className="h-5 w-5 mr-2 text-purple-600" />
+                BASE CIENTÍFICA:
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Músculos Alvo:</h4>
+                  <div className="flex flex-wrap gap-1">
+                    {exercise.scientificData.targetMuscles.map((muscle, idx) => (
+                      <span key={idx} className="text-xs px-2 py-1 bg-purple-50 text-purple-700 rounded-full">
+                        {muscle}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Fundamentação Científica:</h4>
+                  <ul className="space-y-1">
+                    {exercise.scientificData.scientificBasis.map((basis, idx) => (
+                      <li key={idx} className="flex items-start">
+                        <span className="text-blue-600 mr-2">•</span>
+                        <p className="text-gray-700 text-sm">{basis}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Resultados Esperados:</h4>
+                  <ul className="space-y-1">
+                    {exercise.scientificData.expectedResults.map((result, idx) => (
+                      <li key={idx} className="flex items-start">
+                        <span className="text-green-600 mr-2">•</span>
+                        <p className="text-gray-700 text-sm">{result}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                
+                {exercise.scientificData.contraindicatedFor && exercise.scientificData.contraindicatedFor.length > 0 && (
+                  <div className="mt-2 p-3 bg-red-50 border border-red-100 rounded-lg">
+                    <h4 className="font-medium text-red-800 mb-1 flex items-center">
+                      <ShieldExclamationIcon className="h-5 w-5 mr-2" />
+                      CONTRAINDICADO PARA:
+                    </h4>
+                    <ul className="space-y-1 mt-2">
+                      {exercise.scientificData.contraindicatedFor.map((condition, idx) => (
+                        <li key={idx} className="flex items-start">
+                          <span className="text-red-600 mr-2">•</span>
+                          <p className="text-gray-700 text-sm">{condition}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {exercise.scientificData.adaptations && Object.keys(exercise.scientificData.adaptations).length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="font-medium text-gray-900 mb-2 flex items-center">
+                      <AdjustmentsHorizontalIcon className="h-5 w-5 mr-1 text-blue-600" />
+                      Adaptações para condições específicas:
+                    </h4>
+                    <div className="space-y-3">
+                      {Object.entries(exercise.scientificData.adaptations).map(([condition, adaptation], idx) => (
+                        <div key={idx} className="border-b border-gray-100 pb-2 last:border-0 last:pb-0">
+                          <h5 className="font-medium text-gray-800 mb-1">{condition}:</h5>
+                          <p className="text-gray-600 text-sm">{adaptation}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Action Buttons */}
         <div className="flex space-x-3 mb-8">
-          <button
-            onClick={startTimer}
-            className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-medium flex items-center justify-center gap-2 transition-colors"
-          >
-            <PlayIcon className="h-5 w-5" />
-            INICIAR COM TIMER
-          </button>
+          {!completed ? (
+            <button
+              onClick={handleComplete}
+              className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-medium flex items-center justify-center gap-2 transition-colors"
+              aria-label="Marcar exercício como concluído"
+            >
+              <CheckIcon className="h-5 w-5" />
+              CONCLUIR EXERCÍCIO
+            </button>
+          ) : (
+            <button
+              className="flex-1 py-3 bg-green-600 text-white rounded-xl font-medium flex items-center justify-center gap-2 cursor-default"
+              disabled
+            >
+              <CheckIcon className="h-5 w-5" />
+              EXERCÍCIO CONCLUÍDO
+            </button>
+          )}
           
           <button
             className="py-3 px-4 bg-white border border-purple-300 text-purple-700 rounded-xl font-medium hover:bg-purple-50 transition-colors flex items-center"
+            aria-label="Ver resultados"
           >
             <ChartBarIcon className="h-5 w-5 mr-2" />
-            MEUS RESULTADOS
+            RESULTADOS
           </button>
         </div>
-
       </div>
 
-      {/* Big View Mode para instruções */}
-      {isBigViewMode && (
-        <div className="fixed inset-0 bg-white z-50 flex flex-col">
-          <div className="bg-purple-100 p-4 flex items-center justify-between">
-            <h2 className="text-xl font-bold text-purple-900">{exercise.name}</h2>
-            <button 
-              onClick={() => setIsBigViewMode(false)}
-              className="p-2 rounded-full bg-white"
-            >
-              <ArrowLeftIcon className="h-6 w-6 text-gray-700" />
-            </button>
-          </div>
-          <div className="flex-1 p-6 flex flex-col items-center justify-center">
-            <div className="text-5xl mb-6">{exercise.icon}</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4 text-center">
-              Passo {currentStep + 1} de {exercise.instructions.length}
-            </h3>
-            <p className="text-xl text-center text-gray-700 mb-8">
-              {exercise.instructions[currentStep]}
-            </p>
-            
-            {autoAdvance && (
-              <div className="w-full max-w-sm">
-                <div className="w-full bg-gray-200 rounded-full h-4 mb-2">
-                  <div 
-                    className="h-4 rounded-full bg-purple-600"
-                    style={{ width: `${getStepTimeProgress()}%` }}
-                  />
-                </div>
-                <p className="text-center text-gray-600">{stepTimeRemaining}s restantes</p>
-              </div>
-            )}
-          </div>
-          <div className="bg-gray-100 p-4 flex justify-around">
-            <button
-              onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
-              disabled={currentStep === 0}
-              className="p-3 rounded-full bg-white shadow disabled:opacity-50"
-            >
-              <ArrowLeftIcon className="h-6 w-6 text-purple-700" />
-            </button>
-            
-            <button
-              onClick={() => speakInstruction(exercise.instructions[currentStep])}
-              className="p-3 rounded-full bg-white shadow"
-            >
-              <SpeakerWaveIcon className="h-6 w-6 text-purple-700" />
-            </button>
-            
-            <button
-              onClick={() => setCurrentStep(prev => Math.min(exercise.instructions.length - 1, prev + 1))}
-              disabled={currentStep === exercise.instructions.length - 1}
-              className="p-3 rounded-full bg-white shadow disabled:opacity-50"
-            >
-              <ChevronRightIcon className="h-6 w-6 text-purple-700" />
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Confetti Effect */}
-      {showConfetti && (
-        <div className="fixed inset-0 pointer-events-none z-50">
-          <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
-            {[...Array(50)].map((_, i) => (
-              <div
-                key={i}
-                className="absolute"
-                style={{
-                  top: `${Math.random() * 100}%`,
-                  left: `${Math.random() * 100}%`,
-                  width: `${Math.random() * 10 + 5}px`,
-                  height: `${Math.random() * 10 + 5}px`,
-                  backgroundColor: `hsl(${Math.random() * 360}, 100%, 50%)`,
-                  borderRadius: '50%',
-                  animation: `fall ${Math.random() * 3 + 2}s linear forwards`,
-                }}
-              />
-            ))}
-          </div>
-          <style>{`
-            @keyframes fall {
-              0% {
-                transform: translateY(-100px) rotate(0deg);
-                opacity: 1;
-              }
-              100% {
-                transform: translateY(calc(100vh + 100px)) rotate(720deg);
-                opacity: 0;
-              }
-            }
-          `}</style>
-        </div>
-      )}
+      <ConfettiEffect active={showConfetti} />
     </div>
   );
 };
 
-// Função para obter emoji baseado na categoria
+// Function to get emoji based on category
 function getCategoryEmoji(category: string): string {
   const emojiMap: Record<string, string> = {
     'Respiração': '🫁',
+    'Respiração Terapêutica': '🫁',
     'Mobilidade': '🤸',
+    'Mobilidade Geral': '🤸',
     'Alongamento': '🧘‍♀️',
     'Fortalecimento': '💪',
     'Meditação': '🧠',
-    'Relaxamento': '😌'
+    'Relaxamento': '😌',
+    'Alívio Cervical': '💆‍♀️',
+    'Liberação Lombar': '🔄'
   };
   
   return emojiMap[category] || '🧘‍♀️';

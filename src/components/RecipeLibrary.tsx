@@ -1,266 +1,278 @@
 import React, { useState } from 'react';
-import { ArrowLeftIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
-import { User } from '@/types';
+import { Recipe, RecipeCategory } from '@/types';
+import { recipes, recipeCategories } from '@/data/recipes';
 import { Card, CardContent } from './ui/Card';
+import { Search, Clock, Filter } from 'lucide-react';
 import Header from './Header';
+import RecipeDetail from './RecipeDetail';
 
 interface RecipeLibraryProps {
   onBack: () => void;
-  user: User;
+  user: any;
   onProfileClick: () => void;
 }
 
-interface Recipe {
-  id: number;
-  name: string;
-  category: string;
-  prepTime: string;
-  image: string;
-  ingredients: string[];
-  description: string;
-}
-
-const recipes: Recipe[] = [
-  {
-    id: 1,
-    name: 'Salada de Quinoa',
-    category: 'Almoço',
-    prepTime: '15 min',
-    image: '🥗',
-    ingredients: ['Quinoa', 'Tomate', 'Pepino', 'Azeite', 'Limão'],
-    description: 'Salada nutritiva rica em proteínas e vegetais frescos.'
-  },
-  {
-    id: 2,
-    name: 'Smoothie Verde',
-    category: 'Bebidas',
-    prepTime: '5 min',
-    image: '🥤',
-    ingredients: ['Espinafre', 'Banana', 'Maçã', 'Água de Coco'],
-    description: 'Bebida refrescante cheia de vitaminas e minerais.'
-  },
-  {
-    id: 3,
-    name: 'Pasta de Grão-de-bico',
-    category: 'Lanches',
-    prepTime: '10 min',
-    image: '🧆',
-    ingredients: ['Grão-de-bico', 'Tahine', 'Alho', 'Azeite', 'Limão'],
-    description: 'Ótima opção para lanches saudáveis com vegetais.'
-  },
-  {
-    id: 4,
-    name: 'Aveia com Frutas',
-    category: 'Café da Manhã',
-    prepTime: '5 min',
-    image: '🥣',
-    ingredients: ['Aveia', 'Banana', 'Mel', 'Canela', 'Nozes'],
-    description: 'Café da manhã rápido e energético para começar o dia.'
-  },
-  {
-    id: 5,
-    name: 'Sopa de Legumes',
-    category: 'Jantar',
-    prepTime: '30 min',
-    image: '🍲',
-    ingredients: ['Cenoura', 'Abobrinha', 'Cebola', 'Batata', 'Temperos'],
-    description: 'Sopa leve e nutritiva, perfeita para o jantar.'
-  },
-  {
-    id: 6,
-    name: 'Tofu Grelhado',
-    category: 'Almoço',
-    prepTime: '20 min',
-    image: '🍛',
-    ingredients: ['Tofu', 'Molho de Soja', 'Gengibre', 'Alho', 'Legumes'],
-    description: 'Prato proteico e saboroso para almoço ou jantar.'
-  }
-];
-
-const RecipeLibrary: React.FC<RecipeLibraryProps> = ({ onBack, user, onProfileClick }) => {
-  const [selectedCategory, setSelectedCategory] = useState('Todas');
-  const [searchTerm, setSearchTerm] = useState('');
+const RecipeLibrary: React.FC<RecipeLibraryProps> = ({
+  onBack,
+  user,
+  onProfileClick
+}) => {
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [filterMenuOpen, setFilterMenuOpen] = useState(false);
+  const [dietaryFilters, setDietaryFilters] = useState<string[]>([]);
+  const [timeFilter, setTimeFilter] = useState<number | null>(null);
 
-  const categories = ['Todas', 'Café da Manhã', 'Almoço', 'Jantar', 'Lanches', 'Bebidas'];
-  
+  const dietaryOptions = [
+    { id: 'diabetes', label: 'Diabetes' },
+    { id: 'hipertensao', label: 'Hipertensão' },
+    { id: 'colesterol', label: 'Colesterol Alto' },
+    { id: 'gastrite', label: 'Gastrite' },
+    { id: 'intestino', label: 'Intestino Irritável' }
+  ];
+
+  const timeOptions = [
+    { id: 5, label: 'Até 5 minutos' },
+    { id: 10, label: 'Até 10 minutos' },
+    { id: 15, label: 'Até 15 minutos' }
+  ];
+
+  const toggleDietaryFilter = (id: string) => {
+    setDietaryFilters(prev => 
+      prev.includes(id) 
+        ? prev.filter(f => f !== id) 
+        : [...prev, id]
+    );
+  };
+
+  const toggleTimeFilter = (time: number) => {
+    setTimeFilter(prev => prev === time ? null : time);
+  };
+
   const filteredRecipes = recipes.filter(recipe => {
-    const matchesCategory = selectedCategory === 'Todas' || recipe.category === selectedCategory;
-    const matchesSearch = recipe.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         recipe.ingredients.some(ingredient => ingredient.toLowerCase().includes(searchTerm.toLowerCase()));
-    return matchesCategory && matchesSearch;
+    // Text search
+    if (searchQuery && !recipe.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+    
+    // Category filter
+    if (selectedCategory && recipe.category !== selectedCategory) {
+      return false;
+    }
+    
+    // Time filter
+    if (timeFilter && recipe.prepTime > timeFilter) {
+      return false;
+    }
+    
+    // Dietary filters - check if recipe has adaptations for all selected conditions
+    if (dietaryFilters.length > 0) {
+      return dietaryFilters.every(filter => {
+        const condition = dietaryOptions.find(opt => opt.id === filter)?.label;
+        return condition && recipe.adaptations && recipe.adaptations[condition];
+      });
+    }
+    
+    return true;
   });
 
   if (selectedRecipe) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white pb-20">
-        <Header 
-          user={user}
-          onProfileClick={onProfileClick}
-          title={selectedRecipe.name}
-          showBackButton
-          onBackClick={() => setSelectedRecipe(null)}
-        />
-        
-        <div className="px-4 max-w-md mx-auto">
-          <div className="flex justify-center mb-6">
-            <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-teal-500 rounded-2xl flex items-center justify-center text-4xl text-white">
-              {selectedRecipe.image}
-            </div>
-          </div>
-          
-          <Card variant="default" size="md" className="mb-5">
-            <CardContent className="p-4">
-              <div className="flex justify-between items-center mb-4">
-                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-                  {selectedRecipe.category}
-                </span>
-                <span className="text-sm text-gray-600 flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  {selectedRecipe.prepTime}
-                </span>
-              </div>
-              
-              <p className="text-gray-700 mb-6">{selectedRecipe.description}</p>
-              
-              <h3 className="font-medium text-gray-900 mb-3">Ingredientes</h3>
-              <ul className="space-y-2 mb-6">
-                {selectedRecipe.ingredients.map((ingredient, index) => (
-                  <li key={index} className="flex items-center">
-                    <span className="mr-2 text-green-600">•</span>
-                    <span className="text-gray-700">{ingredient}</span>
-                  </li>
-                ))}
-              </ul>
-              
-              <div className="bg-yellow-50 rounded-xl p-4 border border-yellow-100">
-                <h4 className="font-medium text-yellow-800 mb-2">Dica de Preparo</h4>
-                <p className="text-sm text-gray-700">
-                  Para obter o melhor sabor, use ingredientes frescos e orgânicos sempre que possível. Ajuste os temperos de acordo com sua preferência.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card variant="default" size="md">
-            <CardContent className="p-4">
-              <h3 className="font-medium text-gray-900 mb-3">Informação Nutricional</h3>
-              <div className="grid grid-cols-4 gap-2 text-center">
-                <div className="bg-gray-50 rounded-lg p-2">
-                  <p className="text-sm text-gray-500">Calorias</p>
-                  <p className="font-medium text-gray-900">250</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-2">
-                  <p className="text-sm text-gray-500">Proteínas</p>
-                  <p className="font-medium text-gray-900">12g</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-2">
-                  <p className="text-sm text-gray-500">Carbs</p>
-                  <p className="font-medium text-gray-900">30g</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-2">
-                  <p className="text-sm text-gray-500">Gorduras</p>
-                  <p className="font-medium text-gray-900">8g</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      <RecipeDetail
+        recipe={selectedRecipe}
+        onBack={() => setSelectedRecipe(null)}
+        user={user}
+        onProfileClick={onProfileClick}
+      />
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white pb-20">
+    <div className="min-h-screen bg-white pb-20">
       <Header 
-        user={user}
+        user={user} 
         onProfileClick={onProfileClick}
-        title="Receitas Saudáveis"
-        showBackButton
+        title="Nutrição Anti-inflamatória" 
+        showBackButton 
         onBackClick={onBack}
       />
-      
+
       <div className="px-4 max-w-md mx-auto">
-        {/* Search Bar */}
-        <div className="relative mb-4">
-          <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-          <input
-            type="text"
-            placeholder="Buscar por receita ou ingrediente..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-white/90 backdrop-blur-sm rounded-xl border border-gray-200 focus:outline-none focus:border-green-400 text-gray-700"
-          />
+        {/* Search and Filter Bar */}
+        <div className="mb-4 flex space-x-2">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <input
+              type="text"
+              placeholder="Buscar receita..."
+              className="w-full py-2 pl-10 pr-4 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <button
+            onClick={() => setFilterMenuOpen(!filterMenuOpen)}
+            className={`p-2 rounded-lg ${filterMenuOpen || dietaryFilters.length > 0 || timeFilter ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}`}
+          >
+            <Filter className="h-5 w-5" />
+          </button>
         </div>
 
-        {/* Category Filters */}
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-6 no-scrollbar">
-          {categories.map((category) => (
+        {/* Filter Menu */}
+        {filterMenuOpen && (
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200 shadow-sm">
+            <h3 className="font-medium text-gray-900 mb-3">Filtre por condição específica:</h3>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {dietaryOptions.map(option => (
+                <button
+                  key={option.id}
+                  onClick={() => toggleDietaryFilter(option.id)}
+                  className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
+                    dietaryFilters.includes(option.id)
+                      ? 'bg-purple-100 text-purple-700 border border-purple-300'
+                      : 'bg-white border border-gray-300 text-gray-700'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            
+            <h3 className="font-medium text-gray-900 mb-3">Tempo de preparo:</h3>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {timeOptions.map(option => (
+                <button
+                  key={option.id}
+                  onClick={() => toggleTimeFilter(option.id)}
+                  className={`px-3 py-1.5 rounded-full text-sm transition-colors flex items-center ${
+                    timeFilter === option.id
+                      ? 'bg-purple-100 text-purple-700 border border-purple-300'
+                      : 'bg-white border border-gray-300 text-gray-700'
+                  }`}
+                >
+                  <Clock className="h-3 w-3 mr-1" />
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            
             <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
-              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                selectedCategory === category
-                  ? 'bg-green-600 text-white'
-                  : 'bg-white/80 border border-gray-200 text-gray-700 hover:bg-gray-100'
+              onClick={() => {
+                setDietaryFilters([]);
+                setTimeFilter(null);
+                setFilterMenuOpen(false);
+              }}
+              className="mt-3 text-sm text-purple-600 font-medium"
+            >
+              Limpar filtros
+            </button>
+          </div>
+        )}
+
+        {/* Category Chips */}
+        <div className="mb-6 overflow-x-auto">
+          <div className="flex space-x-2 pb-2">
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className={`px-3 py-2 rounded-full whitespace-nowrap transition-colors ${
+                selectedCategory === null
+                  ? 'bg-purple-100 text-purple-700 border border-purple-300'
+                  : 'bg-white border border-gray-300 text-gray-700'
               }`}
             >
-              {category}
+              Todas
             </button>
-          ))}
+            
+            {recipeCategories.map(category => (
+              <button
+                key={category.id}
+                onClick={() => setSelectedCategory(category.name)}
+                className={`px-3 py-2 rounded-full whitespace-nowrap transition-colors flex items-center ${
+                  selectedCategory === category.name
+                    ? 'bg-purple-100 text-purple-700 border border-purple-300'
+                    : 'bg-white border border-gray-300 text-gray-700'
+                }`}
+              >
+                <span className="mr-1">{category.icon}</span>
+                {category.name}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Recipe Cards */}
-        <div className="space-y-4">
-          {filteredRecipes.map((recipe) => (
-            <Card
-              key={recipe.id}
-              onClick={() => setSelectedRecipe(recipe)}
-              variant="default"
-              size="md"
-              hover="scale"
-              className="overflow-hidden"
-            >
-              <CardContent className="flex items-start p-4">
-                <div className={`h-16 w-16 rounded-2xl flex items-center justify-center text-3xl bg-gradient-to-r from-green-400 to-teal-500 text-white mr-4 flex-shrink-0`}>
-                  {recipe.image}
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg text-gray-900 mb-1">{recipe.name}</h3>
-                  <p className="text-sm text-gray-600 mb-2">{recipe.description}</p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                      {recipe.category}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {recipe.prepTime}
-                    </span>
+        {/* Recipes List */}
+        {filteredRecipes.length > 0 ? (
+          <div className="space-y-4">
+            {filteredRecipes.map(recipe => (
+              <Card
+                key={recipe.id}
+                className="overflow-hidden transition-shadow hover:shadow-md cursor-pointer"
+                onClick={() => setSelectedRecipe(recipe)}
+              >
+                <div className="aspect-video relative">
+                  <img
+                    src={recipe.image}
+                    alt={recipe.name}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-white text-xs font-medium px-2 py-1 bg-black/40 rounded-full flex items-center">
+                        <Clock className="h-3 w-3 mr-1" />
+                        {recipe.time}
+                      </span>
+                      <span className="text-white text-xs font-medium px-2 py-1 bg-black/40 rounded-full">
+                        {getCategoryEmoji(recipe.category)} {recipe.category}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-
-          {filteredRecipes.length === 0 && (
-            <div className="text-center py-10">
-              <p className="text-gray-500">Nenhuma receita encontrada.</p>
-              <button 
-                onClick={() => {
-                  setSearchTerm('');
-                  setSelectedCategory('Todas');
-                }}
-                className="mt-2 text-green-600 font-medium"
-              >
-                Limpar filtros
-              </button>
-            </div>
-          )}
-        </div>
+                
+                <CardContent className="p-4">
+                  <h3 className="font-medium text-gray-900 mb-1">{recipe.name}</h3>
+                  <p className="text-sm text-gray-600 line-clamp-2 mb-2">{recipe.benefits}</p>
+                  
+                  {dietaryFilters.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {dietaryFilters.map(filter => {
+                        const condition = dietaryOptions.find(opt => opt.id === filter)?.label;
+                        return condition && recipe.adaptations && recipe.adaptations[condition] ? (
+                          <span key={filter} className="text-xs px-2 py-0.5 bg-green-100 text-green-800 rounded-full">
+                            Adaptado para {condition}
+                          </span>
+                        ) : null;
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-10">
+            <div className="text-4xl mb-3">🔍</div>
+            <h3 className="text-gray-900 font-medium mb-1">Nenhuma receita encontrada</h3>
+            <p className="text-gray-600 text-sm">Tente mudar os filtros ou a busca</p>
+          </div>
+        )}
       </div>
     </div>
   );
 };
+
+// Helper function to get emoji based on category
+function getCategoryEmoji(category: string): string {
+  const emojiMap: Record<string, string> = {
+    'Café da Manhã': '🌅',
+    'Almoço': '🥗',
+    'Jantar': '🍲',
+    'Bebida': '🥤',
+    'Lanche': '🥪',
+    'Sobremesa': '🍰'
+  };
+  
+  return emojiMap[category] || '🍽️';
+}
 
 export default RecipeLibrary;

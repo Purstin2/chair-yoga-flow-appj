@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeftIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { Exercise, User } from '@/types';
-import { exercises } from '@/data/exercises';
 import { Card, CardContent } from './ui/Card';
 import Header from './Header';
 
@@ -10,24 +9,26 @@ interface ExerciseLibraryProps {
   onSelectExercise: (exercise: Exercise) => void;
   user: User;
   onProfileClick: () => void;
+  exercises?: Exercise[];
 }
 
 const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ 
   onBack, 
   onSelectExercise,
   user,
-  onProfileClick
+  onProfileClick,
+  exercises = []
 }) => {
-  const [selectedCategory, setSelectedCategory] = useState('Todos');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Todas as categorias disponíveis
-  const allCategories = ['Todos', ...new Set(exercises.map(ex => ex.category))];
+  // Get unique categories from exercises
+  const categories = Array.from(new Set(exercises.map(ex => ex.category)));
 
+  // Filter exercises based on category and search term
   const filteredExercises = exercises.filter(exercise => {
-    const matchesCategory = selectedCategory === 'Todos' || exercise.category === selectedCategory;
-    const matchesSearch = exercise.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         exercise.targetAreas.some(area => area.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesCategory = !selectedCategory || exercise.category === selectedCategory;
+    const matchesSearch = exercise.name.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
@@ -44,26 +45,45 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({
       <div className="px-4 max-w-md mx-auto">
         {/* Search Bar */}
         <div className="relative mb-4">
-          <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
           <input
             type="text"
-            placeholder="Buscar por exercício ou área do corpo..."
+            placeholder="Buscar exercício..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-white/90 backdrop-blur-sm rounded-xl border border-gray-200 focus:outline-none focus:border-purple-400 text-gray-700"
+            className="w-full px-4 py-2 pl-10 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
         </div>
 
         {/* Category Filters */}
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-6 no-scrollbar">
-          {allCategories.map((category) => (
+        <div className="flex flex-wrap gap-2 mb-6">
+          <button
+            onClick={() => setSelectedCategory(null)}
+            className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
+              !selectedCategory
+                ? 'bg-purple-100 text-purple-700 border border-purple-300'
+                : 'bg-white border border-gray-300 text-gray-700'
+            }`}
+          >
+            Todos
+          </button>
+          
+          {categories.map(category => (
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}
-              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+              className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
                 selectedCategory === category
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-white/80 border border-gray-200 text-gray-700 hover:bg-gray-100'
+                  ? 'bg-purple-100 text-purple-700 border border-purple-300'
+                  : 'bg-white border border-gray-300 text-gray-700'
               }`}
             >
               {category}
@@ -71,54 +91,46 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({
           ))}
         </div>
 
-        {/* Exercise List - Agora como cards retangulares */}
+        {/* Exercise List */}
         <div className="space-y-4">
-          {filteredExercises.map((exercise) => (
-            <Card
+          {filteredExercises.map(exercise => (
+            <Card 
               key={exercise.id}
+              className="overflow-hidden cursor-pointer transition-shadow hover:shadow-md"
               onClick={() => onSelectExercise(exercise)}
-              variant="default"
-              size="md"
-              hover="scale"
-              className="overflow-hidden"
             >
-              <CardContent className="flex items-start p-4">
-                <div className="h-16 w-16 bg-purple-100 rounded-xl flex items-center justify-center text-2xl mr-4 flex-shrink-0">
-                  {exercise.icon}
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 mb-1">{exercise.name}</h3>
-                  <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                    {exercise.targetAreas.join(', ')}
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
-                      {exercise.duration} min
-                    </span>
-                    <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
-                      {exercise.difficulty}
-                    </span>
+              <CardContent className="p-0">
+                <div className="flex">
+                  <div className="w-24 h-24 bg-purple-100 flex items-center justify-center text-4xl flex-shrink-0">
+                    {exercise.icon}
+                  </div>
+                  <div className="p-4 flex-1">
+                    <h3 className="font-medium text-gray-900 mb-1">{exercise.name}</h3>
+                    <p className="text-gray-600 text-sm mb-2">{exercise.description.substring(0, 70)}...</p>
+                    <div className="flex items-center text-xs">
+                      <span className={`px-2 py-0.5 rounded-full mr-2 ${
+                        exercise.difficulty === 'Fácil'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {exercise.difficulty}
+                      </span>
+                      <span className="text-gray-500">{exercise.duration} min</span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
           ))}
-        </div>
 
-        {filteredExercises.length === 0 && (
-          <div className="text-center p-8">
-            <p className="text-gray-500">Nenhum exercício encontrado.</p>
-            <button 
-              onClick={() => {
-                setSearchTerm('');
-                setSelectedCategory('Todos');
-              }}
-              className="mt-2 text-purple-600 font-medium"
-            >
-              Limpar filtros
-            </button>
-          </div>
-        )}
+          {filteredExercises.length === 0 && (
+            <div className="text-center py-8">
+              <div className="text-4xl mb-3">🔍</div>
+              <h3 className="text-gray-900 font-medium mb-1">Nenhum exercício encontrado</h3>
+              <p className="text-gray-600 text-sm">Tente mudar os filtros ou a busca</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

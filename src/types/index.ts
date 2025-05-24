@@ -81,6 +81,8 @@ export interface Exercise {
   audioInstructions?: string[]; // Audio instructions for each step
   hasWarning?: boolean; // If exercise needs special medical warning
   warningText?: string; // Specific warning text
+  scientificData?: ExerciseScientificData; // New scientific data
+  executionSteps?: { step: number; instruction: string; duration: number }[]; // Detailed step-by-step with timing
 }
 
 export interface Recipe {
@@ -94,6 +96,11 @@ export interface Recipe {
   ingredients: string[];
   instructions: string[];
   benefits: string;
+  scientificBenefits: string[]; // Scientific evidence-based benefits
+  contraindications: string[]; // Who should avoid this recipe
+  adaptations: Record<string, string>; // Adaptations for specific conditions
+  prepTime: number; // in minutes
+  specialTip?: string; // Special preparation or consumption tip
 }
 
 export interface Meditation {
@@ -122,4 +129,22 @@ export interface Achievement {
   icon: string;
   unlockedAt?: Date;
   isUnlocked: boolean;
+}
+
+export interface ExerciseScientificData {
+  initialPosition: string;
+  targetMuscles: string[];
+  scientificBasis: string[];
+  expectedResults: string[];
+  adaptations: Record<string, string>;
+  repetitions?: string;
+  sets?: string;
+  contraindicatedFor?: string[];
+}
+
+export interface RecipeCategory {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
 } 
