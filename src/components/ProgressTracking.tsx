@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ArrowLeft, TrendingUp, Award, Calendar, Clock, Heart, Zap, Brain } from 'lucide-react';
 import StatsCard from './StatsCard';
@@ -44,7 +43,7 @@ const ProgressTracking: React.FC<ProgressTrackingProps> = ({
   // Calculate wellness metrics from daily checkins
   const checkinData = Object.values(userProgress.dailyCheckins);
   const avgPain = checkinData.length > 0 
-    ? checkinData.reduce((sum: number, checkin: any) => sum + (checkin.painLevel || 5), 0) / checkinData.length 
+    ? (checkinData.reduce((sum: number, checkin: any) => sum + (Number(checkin.painLevel) || 5), 0) / checkinData.length)
     : 5;
 
   const moodTrend = checkinData.slice(-7).map((checkin: any, index) => ({
