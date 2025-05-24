@@ -6,7 +6,9 @@ import ProgramCalendar from '../components/ProgramCalendar';
 import ExerciseDetail from '../components/ExerciseDetail';
 import ExerciseLibrary from '../components/ExerciseLibrary';
 import RecipeLibrary from '../components/RecipeLibrary';
+import MeditationLibrary from '../components/MeditationLibrary';
 import ProfileScreen from '../components/ProfileScreen';
+import LoginScreen from '../components/LoginScreen';
 import { exercises } from '../data/exercises';
 
 const Index = () => {
@@ -14,22 +16,101 @@ const Index = () => {
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedExercise, setSelectedExercise] = useState<number | null>(null);
   const [selectedLibraryExercise, setSelectedLibraryExercise] = useState<any | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
-  // Simplified user progress without gamification
+  // Sistema de progresso real que começa zerado para novos usuários
   const [userProgress, setUserProgress] = useState(() => {
     const saved = localStorage.getItem('yogaChairProgress');
-    return saved ? JSON.parse(saved) : {
-      completedDays: 5,
-      totalMinutes: 127,
-      completedExercises: [2],
-      currentDay: 6,
+    if (saved && isLoggedIn) {
+      return JSON.parse(saved);
+    }
+    return {
+      completedDays: 0,
+      totalMinutes: 0,
+      completedExercises: [],
+      currentDay: 1,
+      startDate: null,
+      dailyCheckins: {},
     };
   });
 
-  // Save progress to localStorage whenever it changes
+  // Verificar login ao carregar
   useEffect(() => {
-    localStorage.setItem('yogaChairProgress', JSON.stringify(userProgress));
-  }, [userProgress]);
+    const savedUser = localStorage.getItem('currentUser');
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+      setCurrentUser(user);
+      setIsLoggedIn(true);
+      
+      // Carregar progresso do usuário específico
+      const userProgressKey = `yogaChairProgress_${user.email}`;
+      const savedProgress = localStorage.getItem(userProgressKey);
+      if (savedProgress) {
+        setUserProgress(JSON.parse(savedProgress));
+      }
+    }
+  }, []);
+
+  // Salvar progresso específico do usuário
+  useEffect(() => {
+    if (isLoggedIn && currentUser) {
+      const userProgressKey = `yogaChairProgress_${currentUser.email}`;
+      localStorage.setItem(userProgressKey, JSON.stringify(userProgress));
+    }
+  }, [userProgress, isLoggedIn, currentUser]);
+
+  // Calcular dia atual baseado na data de início
+  useEffect(() => {
+    if (userProgress.startDate && isLoggedIn) {
+      const startDate = new Date(userProgress.startDate);
+      const today = new Date();
+      const diffTime = Math.abs(today.getTime() - startDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays !== userProgress.currentDay && diffDays <= 21) {
+        setUserProgress(prev => ({
+          ...prev,
+          currentDay: diffDays
+        }));
+      }
+    }
+  }, [userProgress.startDate, isLoggedIn]);
+
+  const handleLogin = (userData: any) => {
+    setCurrentUser(userData);
+    setIsLoggedIn(true);
+    localStorage.setItem('currentUser', JSON.stringify(userData));
+    
+    // Inicializar progresso se for novo usuário
+    const userProgressKey = `yogaChairProgress_${userData.email}`;
+    const existingProgress = localStorage.getItem(userProgressKey);
+    
+    if (!existingProgress) {
+      const newProgress = {
+        completedDays: 0,
+        totalMinutes: 0,
+        completedExercises: [],
+        currentDay: 1,
+        startDate: new Date().toISOString(),
+        dailyCheckins: {},
+      };
+      setUserProgress(newProgress);
+      localStorage.setItem(userProgressKey, JSON.stringify(newProgress));
+    }
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setCurrentUser(null);
+    localStorage.removeItem('currentUser');
+    setActiveTab('home');
+    setCurrentView('dashboard');
+  };
+
+  if (!isLoggedIn) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -41,6 +122,8 @@ const Index = () => {
       setCurrentView('exercise-library');
     } else if (tab === 'recipes') {
       setCurrentView('recipes');
+    } else if (tab === 'meditation') {
+      setCurrentView('meditation');
     } else if (tab === 'profile') {
       setCurrentView('profile');
     }
@@ -93,7 +176,6 @@ const Index = () => {
         if (selectedExercise) {
           const exercise = exercises.find(e => e.id === selectedExercise);
           if (exercise) {
-            // Convert the exercise from exercises.ts to match ExerciseDetail's expected format
             const formattedExercise = {
               ...exercise,
               targetArea: exercise.targetAreas?.[0] || 'Corpo Todo',
@@ -140,22 +222,32 @@ const Index = () => {
             onBack={() => setCurrentView('dashboard')}
           />
         );
+      case 'meditation':
+        return (
+          <MeditationLibrary
+            onBack={() => setCurrentView('dashboard')}
+          />
+        );
       case 'profile':
         return (
           <ProfileScreen
             onBack={() => setCurrentView('dashboard')}
+            onLogout={handleLogout}
+            currentUser={currentUser}
+            userProgress={userProgress}
           />
         );
       default:
         return (
           <Dashboard
             userProgress={userProgress}
+            currentUser={currentUser}
             onStartQuickWorkout={() => {
               setSelectedExercise(1);
               setCurrentView('exercise');
             }}
             onViewProgram={() => setCurrentView('program')}
-            onShowCheckin={() => {}} // Removed checkin functionality
+            onShowCheckin={() => {}}
           />
         );
     }
@@ -163,6 +255,13 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
+      {/* Header da Empresa */}
+      <div className="bg-white/80 backdrop-blur-sm border-b border-purple-100 px-4 py-3 sticky top-0 z-50">
+        <div className="max-w-md mx-auto">
+          <h1 className="text-xl font-bold text-gray-900 text-center">Fenjes</h1>
+        </div>
+      </div>
+      
       {renderCurrentView()}
       <Navigation activeTab={activeTab} onTabChange={handleTabChange} />
     </div>

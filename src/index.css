@@ -84,16 +84,26 @@
   body {
     @apply bg-background text-foreground;
     background: linear-gradient(135deg, #F7F3FF 0%, #EDE7FF 100%);
+    color: #111827; /* Texto padrão preto */
+  }
+
+  /* Garantir que textos sejam pretos por padrão */
+  p, span, div, label {
+    color: #374151;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: #111827;
   }
 }
 
 @layer utilities {
   .gradient-primary {
-    background: linear-gradient(135deg, #7432B4 0%, #9747FF 100%);
+    background: linear-gradient(135deg, #7C3AED 0%, #EC4899 100%);
   }
   
   .gradient-secondary {
-    background: linear-gradient(135deg, #9747FF 0%, #E879F9 100%);
+    background: linear-gradient(135deg, #EC4899 0%, #F472B6 100%);
   }
   
   .gradient-card {
@@ -103,9 +113,39 @@
   }
   
   .gradient-text {
-    background: linear-gradient(135deg, #7432B4 0%, #9747FF 100%);
+    background: linear-gradient(135deg, #7C3AED 0%, #EC4899 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
+
+  /* Melhorar legibilidade dos textos */
+  .text-readable {
+    color: #374151 !important;
+  }
+
+  .text-dark {
+    color: #111827 !important;
+  }
+}
+
+/* Garantir que elementos de formulário tenham boa legibilidade */
+input, textarea, select {
+  color: #111827 !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #9CA3AF !important;
+}
+
+/* Melhorar contraste dos botões */
+.btn-primary {
+  background: linear-gradient(135deg, #7C3AED 0%, #EC4899 100%);
+  color: white !important;
+}
+
+.btn-secondary {
+  background: white;
+  color: #374151 !important;
+  border: 1px solid #D1D5DB;
 }
