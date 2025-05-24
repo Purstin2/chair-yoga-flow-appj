@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Home, Calendar, Activity, User } from 'lucide-react';
+import { Home, Calendar, ChefHat, User } from 'lucide-react';
 
 interface NavigationProps {
   activeTab: string;
@@ -11,7 +11,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }) => {
   const tabs = [
     { id: 'home', icon: Home, label: 'Início' },
     { id: 'program', icon: Calendar, label: 'Programa' },
-    { id: 'progress', icon: Activity, label: 'Progresso' },
+    { id: 'recipes', icon: ChefHat, label: 'Receitas' },
     { id: 'profile', icon: User, label: 'Perfil' },
   ];
 

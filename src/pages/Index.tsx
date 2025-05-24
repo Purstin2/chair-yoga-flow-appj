@@ -4,36 +4,23 @@ import Navigation from '../components/Navigation';
 import Dashboard from '../components/Dashboard';
 import ProgramCalendar from '../components/ProgramCalendar';
 import ExerciseDetail from '../components/ExerciseDetail';
-import ProgressTracking from '../components/ProgressTracking';
-import DailyCheckin from '../components/DailyCheckin';
+import RecipeLibrary from '../components/RecipeLibrary';
+import ProfileScreen from '../components/ProfileScreen';
 import { exercises } from '../data/exercises';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedExercise, setSelectedExercise] = useState<number | null>(null);
-  const [showCheckin, setShowCheckin] = useState(false);
 
-  // Enhanced user progress with new metrics
+  // Simplified user progress without gamification
   const [userProgress, setUserProgress] = useState(() => {
     const saved = localStorage.getItem('yogaChairProgress');
     return saved ? JSON.parse(saved) : {
-      streak: 3,
-      todayMinutes: 9,
-      weekProgress: 65,
       completedDays: 5,
       totalMinutes: 127,
-      badges: ['primeira_semana', '100_minutos'],
-      dailyCheckins: {},
       completedExercises: [2],
       currentDay: 6,
-      favoriteExercise: null,
-      weeklyStats: {
-        totalMinutes: 45,
-        avgEnergy: 7,
-        avgMood: 8,
-        avgPain: 4
-      }
     };
   });
 
@@ -42,22 +29,16 @@ const Index = () => {
     localStorage.setItem('yogaChairProgress', JSON.stringify(userProgress));
   }, [userProgress]);
 
-  // Check if user needs daily check-in
-  useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
-    if (!userProgress.dailyCheckins[today]) {
-      setShowCheckin(true);
-    }
-  }, [userProgress]);
-
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     if (tab === 'home') {
       setCurrentView('dashboard');
     } else if (tab === 'program') {
       setCurrentView('program');
-    } else if (tab === 'progress') {
-      setCurrentView('progress');
+    } else if (tab === 'recipes') {
+      setCurrentView('recipes');
+    } else if (tab === 'profile') {
+      setCurrentView('profile');
     }
   };
 
@@ -69,62 +50,15 @@ const Index = () => {
       setUserProgress(prev => ({
         ...prev,
         completedExercises: [...prev.completedExercises, selectedExercise],
-        todayMinutes: prev.todayMinutes + minutes,
         totalMinutes: prev.totalMinutes + minutes,
         completedDays: Math.min(prev.completedDays + 1, 21),
-        streak: prev.streak + 1,
-        badges: updateBadges(prev, minutes)
       }));
     }
     setCurrentView('dashboard');
     setSelectedExercise(null);
   };
 
-  const updateBadges = (progress: any, addedMinutes: number) => {
-    const newBadges = [...progress.badges];
-    
-    // Check for new badges
-    if (progress.streak >= 3 && !newBadges.includes('primeira_sequencia')) {
-      newBadges.push('primeira_sequencia');
-    }
-    if (progress.streak >= 7 && !newBadges.includes('guerreira')) {
-      newBadges.push('guerreira');
-    }
-    if (progress.completedDays >= 21 && !newBadges.includes('zen_master')) {
-      newBadges.push('zen_master');
-    }
-    if (progress.totalMinutes + addedMinutes >= 200 && !newBadges.includes('dedicada')) {
-      newBadges.push('dedicada');
-    }
-    if (addedMinutes <= 5 && !newBadges.includes('flash')) {
-      newBadges.push('flash');
-    }
-    
-    return newBadges;
-  };
-
-  const handleDailyCheckin = (checkinData: any) => {
-    const today = new Date().toISOString().split('T')[0];
-    setUserProgress(prev => ({
-      ...prev,
-      dailyCheckins: {
-        ...prev.dailyCheckins,
-        [today]: checkinData
-      }
-    }));
-    setShowCheckin(false);
-  };
-
   const renderCurrentView = () => {
-    if (showCheckin) {
-      return (
-        <DailyCheckin 
-          onComplete={handleDailyCheckin}
-          onSkip={() => setShowCheckin(false)}
-        />
-      );
-    }
-
     switch (currentView) {
       case 'program':
         return (
@@ -154,10 +88,15 @@ const Index = () => {
           }
         }
         return <div>Exercise not found</div>;
-      case 'progress':
+      case 'recipes':
         return (
-          <ProgressTracking
-            userProgress={userProgress}
+          <RecipeLibrary
+            onBack={() => setCurrentView('dashboard')}
+          />
+        );
+      case 'profile':
+        return (
+          <ProfileScreen
             onBack={() => setCurrentView('dashboard')}
           />
         );
@@ -170,7 +109,7 @@ const Index = () => {
               setCurrentView('exercise');
             }}
             onViewProgram={() => setCurrentView('program')}
-            onShowCheckin={() => setShowCheckin(true)}
+            onShowCheckin={() => {}} // Removed checkin functionality
           />
         );
     }
