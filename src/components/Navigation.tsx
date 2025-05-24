@@ -1,18 +1,19 @@
-
 import React from 'react';
 import { 
   HomeIcon, 
   CalendarIcon, 
   HeartIcon, 
   BookOpenIcon,
-  UserIcon 
+  UserIcon,
+  SparklesIcon 
 } from '@heroicons/react/24/outline';
 import {
   HomeIcon as HomeIconSolid,
   CalendarIcon as CalendarIconSolid,
   HeartIcon as HeartIconSolid,
   BookOpenIcon as BookOpenIconSolid,
-  UserIcon as UserIconSolid
+  UserIcon as UserIconSolid,
+  SparklesIcon as SparklesIconSolid
 } from '@heroicons/react/24/solid';
 
 interface NavigationProps {
@@ -48,8 +49,8 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }) => {
     },
     { 
       id: 'meditation', 
-      icon: HeartIcon, 
-      iconSolid: HeartIconSolid,
+      icon: SparklesIcon, 
+      iconSolid: SparklesIconSolid,
       label: 'Meditação' 
     },
     { 
