@@ -93,9 +93,15 @@ const Index = () => {
         if (selectedExercise) {
           const exercise = exercises.find(e => e.id === selectedExercise);
           if (exercise) {
+            // Convert the exercise from exercises.ts to match ExerciseDetail's expected format
+            const formattedExercise = {
+              ...exercise,
+              targetArea: exercise.targetAreas?.[0] || 'Corpo Todo',
+              image: exercise.icon
+            };
             return (
               <ExerciseDetail
-                exercise={exercise}
+                exercise={formattedExercise}
                 isCompleted={userProgress.completedExercises.includes(selectedExercise)}
                 onBack={() => setCurrentView('dashboard')}
                 onComplete={handleExerciseComplete}
