@@ -5,7 +5,10 @@ import {
   PlayIcon, 
   PauseIcon,
   ArrowRightIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  SpeakerWaveIcon,
+  ClockIcon,
+  XMarkIcon
 } from '@heroicons/react/24/solid';
 import { Exercise } from '@/types';
 import { formatTime } from '@/lib/utils';
@@ -35,7 +38,12 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
   const [isRunning, setIsRunning] = useState(false);
   const [completed, setCompleted] = useState(isCompleted);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [autoAdvance, setAutoAdvance] = useState(false);
+  const [stepDuration] = useState(30); // Cada passo dura 30 segundos por padrão
+  const [stepTimeRemaining, setStepTimeRemaining] = useState(stepDuration);
+  const [isBigViewMode, setIsBigViewMode] = useState(false);
   const intervalRef = useRef<number | null>(null);
+  const stepIntervalRef = useRef<number | null>(null);
   const stepsRef = useRef<HTMLDivElement>(null);
 
   // Parar o timer ao desmontar o componente
@@ -43,6 +51,9 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
+      }
+      if (stepIntervalRef.current) {
+        clearInterval(stepIntervalRef.current);
       }
     };
   }, []);
@@ -55,7 +66,45 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
         activeStep.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }
-  }, [currentStep]);
+    // Resetar o tempo do passo quando mudar de passo
+    if (autoAdvance) {
+      setStepTimeRemaining(stepDuration);
+    }
+  }, [currentStep, stepDuration, autoAdvance]);
+
+  // Avançar automaticamente os passos quando autoAdvance estiver ativo
+  useEffect(() => {
+    if (autoAdvance && isRunning) {
+      if (stepIntervalRef.current) {
+        clearInterval(stepIntervalRef.current);
+      }
+      
+      stepIntervalRef.current = window.setInterval(() => {
+        setStepTimeRemaining(prev => {
+          if (prev <= 1) {
+            // Avançar para o próximo passo quando o tempo acabar
+            if (currentStep < exercise.instructions.length - 1) {
+              setCurrentStep(prev => prev + 1);
+              return stepDuration;
+            } else {
+              // Último passo concluído
+              clearInterval(stepIntervalRef.current as number);
+              return 0;
+            }
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else if (stepIntervalRef.current) {
+      clearInterval(stepIntervalRef.current);
+    }
+    
+    return () => {
+      if (stepIntervalRef.current) {
+        clearInterval(stepIntervalRef.current);
+      }
+    };
+  }, [autoAdvance, isRunning, currentStep, exercise.instructions.length, stepDuration]);
 
   const startTimer = () => {
     setIsRunning(true);
@@ -81,6 +130,13 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
   const resetTimer = () => {
     pauseTimer();
     setTimer(0);
+    setStepTimeRemaining(stepDuration);
+    setCurrentStep(0);
+  };
+
+  const toggleAutoAdvance = () => {
+    setAutoAdvance(!autoAdvance);
+    setStepTimeRemaining(stepDuration);
   };
 
   const handleComplete = () => {
@@ -102,6 +158,18 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
     return ((currentStep + 1) / exercise.instructions.length) * 100;
   };
 
+  const getStepTimeProgress = () => {
+    return (stepTimeRemaining / stepDuration) * 100;
+  };
+
+  const speakInstruction = (text: string) => {
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'pt-BR';
+      speechSynthesis.speak(utterance);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white pb-20">
       <Header 
@@ -114,14 +182,74 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
 
       <div className="px-4 max-w-md mx-auto">
         {/* Exercise Icon */}
-        <div className="flex justify-center mb-5">
+        <div className="flex justify-center mb-4">
           <div className="w-20 h-20 bg-gradient-to-br from-purple-400 to-pink-400 rounded-2xl flex items-center justify-center text-4xl text-white">
             {exercise.icon}
           </div>
         </div>
 
+        {/* Big View Mode para instruções */}
+        {isBigViewMode && (
+          <div className="fixed inset-0 bg-white z-50 flex flex-col">
+            <div className="bg-purple-100 p-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-purple-900">{exercise.name}</h2>
+              <button 
+                onClick={() => setIsBigViewMode(false)}
+                className="p-2 rounded-full bg-white"
+              >
+                <XMarkIcon className="h-6 w-6 text-gray-700" />
+              </button>
+            </div>
+            <div className="flex-1 p-6 flex flex-col items-center justify-center">
+              <div className="text-5xl mb-6">{exercise.icon}</div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4 text-center">
+                Passo {currentStep + 1} de {exercise.instructions.length}
+              </h3>
+              <p className="text-xl text-center text-gray-700 mb-8">
+                {exercise.instructions[currentStep]}
+              </p>
+              
+              {autoAdvance && (
+                <div className="w-full max-w-sm">
+                  <div className="w-full bg-gray-200 rounded-full h-4 mb-2">
+                    <div 
+                      className="h-4 rounded-full bg-purple-600"
+                      style={{ width: `${getStepTimeProgress()}%` }}
+                    />
+                  </div>
+                  <p className="text-center text-gray-600">{stepTimeRemaining}s restantes</p>
+                </div>
+              )}
+            </div>
+            <div className="bg-gray-100 p-4 flex justify-around">
+              <button
+                onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
+                disabled={currentStep === 0}
+                className="p-3 rounded-full bg-white shadow disabled:opacity-50"
+              >
+                <ArrowLeftIcon className="h-6 w-6 text-purple-700" />
+              </button>
+              
+              <button
+                onClick={() => speakInstruction(exercise.instructions[currentStep])}
+                className="p-3 rounded-full bg-white shadow"
+              >
+                <SpeakerWaveIcon className="h-6 w-6 text-purple-700" />
+              </button>
+              
+              <button
+                onClick={() => setCurrentStep(prev => Math.min(exercise.instructions.length - 1, prev + 1))}
+                disabled={currentStep === exercise.instructions.length - 1}
+                className="p-3 rounded-full bg-white shadow disabled:opacity-50"
+              >
+                <ArrowRightIcon className="h-6 w-6 text-purple-700" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Timer Section */}
-        <Card variant="default" size="md" className="mb-5">
+        <Card variant="default" size="md" className="mb-4">
           <CardHeader>
             <div className="flex justify-between items-center">
               <CardTitle>Tempo</CardTitle>
@@ -162,20 +290,32 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
                 <ArrowPathIcon className="h-6 w-6" />
               </button>
               
+              <button
+                onClick={toggleAutoAdvance}
+                className={`p-3 rounded-full transition-colors ${
+                  autoAdvance 
+                    ? 'bg-green-600 text-white hover:bg-green-700' 
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+                title={autoAdvance ? "Desativar avanço automático" : "Ativar avanço automático"}
+              >
+                <ClockIcon className="h-6 w-6" />
+              </button>
+              
               {timer >= totalDuration && !completed && (
                 <button
                   onClick={handleComplete}
                   className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center shadow-md"
                 >
                   <CheckIcon className="h-5 w-5 mr-1" />
-                  <span>Concluir Exercício</span>
+                  <span>Concluir</span>
                 </button>
               )}
               
               {completed && (
                 <div className="bg-green-100 text-green-800 px-4 py-2 rounded-lg flex items-center">
                   <CheckIcon className="h-5 w-5 mr-1" />
-                  <span>Exercício concluído!</span>
+                  <span>Concluído!</span>
                 </div>
               )}
             </div>
@@ -183,7 +323,7 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
         </Card>
 
         {/* Exercise Steps */}
-        <Card variant="default" size="md" className="mb-5">
+        <Card variant="default" size="md" className="mb-4">
           <CardHeader>
             <div className="flex justify-between items-center">
               <CardTitle>Passo a Passo</CardTitle>
@@ -198,13 +338,32 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
                 style={{ width: `${getStepProgress()}%` }}
               />
             </div>
+            
+            {autoAdvance && (
+              <div className="w-full mt-2 flex items-center justify-between text-xs">
+                <div className="h-1 bg-green-100 rounded-full flex-1 mr-2">
+                  <div 
+                    className="h-1 bg-green-600 rounded-full transition-all duration-1000"
+                    style={{ width: `${getStepTimeProgress()}%` }}
+                  />
+                </div>
+                <span className="text-gray-500">{stepTimeRemaining}s</span>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
-            <div ref={stepsRef} className="space-y-4 max-h-60 overflow-y-auto pb-2 pr-1">
+            <button 
+              onClick={() => setIsBigViewMode(true)}
+              className="w-full py-2 mb-3 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium"
+            >
+              Abrir modo de visualização ampliada
+            </button>
+            
+            <div ref={stepsRef} className="space-y-3 max-h-60 overflow-y-auto pb-2 pr-1">
               {exercise.instructions.map((instruction, index) => (
                 <div 
                   key={index}
-                  className={`p-4 rounded-xl border transition-all duration-300 step-${index} ${
+                  className={`p-3 rounded-xl border transition-all duration-300 step-${index} ${
                     currentStep === index 
                       ? 'bg-purple-50 border-purple-200 shadow-sm' 
                       : index < currentStep
@@ -224,15 +383,26 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
                         <span className="text-xs font-medium">{index + 1}</span>
                       )}
                     </div>
-                    <p className={`text-sm ${currentStep === index ? 'text-gray-900 font-medium' : 'text-gray-700'}`}>
-                      {instruction}
-                    </p>
+                    <div className="flex-1">
+                      <p className={`text-sm ${currentStep === index ? 'text-gray-900 font-medium' : 'text-gray-700'}`}>
+                        {instruction}
+                      </p>
+                      {currentStep === index && (
+                        <button 
+                          onClick={() => speakInstruction(instruction)}
+                          className="mt-2 text-xs flex items-center text-purple-600"
+                        >
+                          <SpeakerWaveIcon className="h-3 w-3 mr-1" />
+                          Ouvir instrução
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="flex justify-between mt-5">
+            <div className="flex justify-between mt-4">
               <button
                 onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
                 disabled={currentStep === 0}
@@ -266,7 +436,7 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
         </Card>
 
         {/* Exercise Info */}
-        <Card variant="default" size="md">
+        <Card variant="default" size="md" className="mb-4">
           <CardHeader>
             <CardTitle>Sobre o exercício</CardTitle>
           </CardHeader>

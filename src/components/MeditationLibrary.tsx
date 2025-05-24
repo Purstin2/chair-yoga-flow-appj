@@ -18,7 +18,7 @@ interface Meditation {
   category: string;
   audioSrc?: string;
   imageSrc?: string;
-  bgColor: string;
+  color: string;
   icon: string;
 }
 
@@ -29,7 +29,7 @@ const meditations: Meditation[] = [
     description: 'Uma meditação simples focada na respiração para acalmar a mente.',
     duration: 300, // 5 minutos em segundos
     category: 'Respiração',
-    bgColor: 'from-blue-400 to-purple-500',
+    color: 'blue-600',
     icon: '🧘‍♀️'
   },
   {
@@ -38,7 +38,7 @@ const meditations: Meditation[] = [
     description: 'Foco na liberação de tensão no pescoço, ombros e costas.',
     duration: 600, // 10 minutos em segundos
     category: 'Relaxamento',
-    bgColor: 'from-green-400 to-teal-500',
+    color: 'green-600',
     icon: '💆‍♀️'
   },
   {
@@ -47,7 +47,7 @@ const meditations: Meditation[] = [
     description: 'Ajuda a relaxar e preparar o corpo para um sono tranquilo.',
     duration: 900, // 15 minutos em segundos
     category: 'Sono',
-    bgColor: 'from-indigo-400 to-blue-600',
+    color: 'indigo-600',
     icon: '🌙'
   },
   {
@@ -56,7 +56,7 @@ const meditations: Meditation[] = [
     description: 'Aumenta a concentração e o foco para atividades diárias.',
     duration: 480, // 8 minutos em segundos
     category: 'Foco',
-    bgColor: 'from-orange-400 to-red-500',
+    color: 'orange-600',
     icon: '🔍'
   },
   {
@@ -65,7 +65,7 @@ const meditations: Meditation[] = [
     description: 'Técnicas para acalmar a mente ansiosa e encontrar paz interior.',
     duration: 720, // 12 minutos em segundos
     category: 'Ansiedade',
-    bgColor: 'from-pink-400 to-purple-600',
+    color: 'pink-600',
     icon: '🌈'
   },
   {
@@ -74,7 +74,7 @@ const meditations: Meditation[] = [
     description: 'Cultive sentimentos de gratidão para melhorar o bem-estar geral.',
     duration: 420, // 7 minutos em segundos
     category: 'Bem-estar',
-    bgColor: 'from-yellow-400 to-orange-500',
+    color: 'yellow-600',
     icon: '🙏'
   }
 ];
@@ -112,7 +112,7 @@ const MeditationLibrary: React.FC<MeditationLibraryProps> = ({ onBack, user, onP
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white pb-20">
+    <div className="min-h-screen bg-white pb-20">
       <Header 
         user={user}
         onProfileClick={onProfileClick}
@@ -161,7 +161,7 @@ const MeditationLibrary: React.FC<MeditationLibraryProps> = ({ onBack, user, onP
               className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
                 selectedCategory === category
                   ? 'bg-purple-600 text-white'
-                  : 'bg-white/80 border border-gray-200 text-gray-700 hover:bg-gray-100'
+                  : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-100'
               }`}
             >
               {category}
@@ -170,7 +170,7 @@ const MeditationLibrary: React.FC<MeditationLibraryProps> = ({ onBack, user, onP
         </div>
 
         {/* Meditation Cards */}
-        <div className="grid grid-cols-1 gap-4 mb-6">
+        <div className="space-y-4 mb-6">
           {filteredMeditations.map((meditation) => (
             <Card 
               key={meditation.id}
@@ -178,11 +178,9 @@ const MeditationLibrary: React.FC<MeditationLibraryProps> = ({ onBack, user, onP
               size="md"
               hover="scale"
               onClick={() => handleStartMeditation(meditation)}
-              className="overflow-hidden"
             >
-              <div className={`absolute top-0 left-0 right-0 h-24 bg-gradient-to-r ${meditation.bgColor} opacity-20`}></div>
-              <CardContent className="flex items-start pt-5">
-                <div className={`h-16 w-16 rounded-2xl flex items-center justify-center text-3xl bg-gradient-to-r ${meditation.bgColor} text-white mr-4 flex-shrink-0`}>
+              <CardContent className="flex items-start p-4">
+                <div className={`h-16 w-16 rounded-xl flex items-center justify-center text-3xl bg-${meditation.color}/10 text-${meditation.color} mr-4 flex-shrink-0`}>
                   {meditation.icon}
                 </div>
                 <div className="flex-1">
@@ -194,6 +192,10 @@ const MeditationLibrary: React.FC<MeditationLibraryProps> = ({ onBack, user, onP
                     </span>
                     <button 
                       className="px-4 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartMeditation(meditation);
+                      }}
                     >
                       Iniciar
                     </button>
@@ -231,7 +233,7 @@ const MeditationLibrary: React.FC<MeditationLibraryProps> = ({ onBack, user, onP
             </button>
             
             <div className="flex flex-col items-center">
-              <div className={`h-28 w-28 rounded-full flex items-center justify-center text-5xl bg-gradient-to-r ${activeMeditation.bgColor} text-white mb-5`}>
+              <div className={`h-28 w-28 rounded-full flex items-center justify-center text-5xl bg-${activeMeditation.color}/10 text-${activeMeditation.color} mb-5`}>
                 {activeMeditation.icon}
               </div>
               
@@ -244,7 +246,7 @@ const MeditationLibrary: React.FC<MeditationLibraryProps> = ({ onBack, user, onP
               
               <div className="w-full bg-gray-100 rounded-full h-2 mb-3">
                 <div 
-                  className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all"
+                  className="bg-purple-600 h-2 rounded-full transition-all"
                   style={{ width: `${(currentTime / activeMeditation.duration) * 100}%` }}
                 />
               </div>

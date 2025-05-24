@@ -71,29 +71,35 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({
           ))}
         </div>
 
-        {/* Exercise Grid */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* Exercise List - Agora como cards retangulares */}
+        <div className="space-y-4">
           {filteredExercises.map((exercise) => (
             <Card
               key={exercise.id}
               onClick={() => onSelectExercise(exercise)}
               variant="default"
-              size="sm"
+              size="md"
               hover="scale"
               className="overflow-hidden"
             >
-              <CardContent className="pt-4">
-                <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center text-2xl mb-3">
+              <CardContent className="flex items-start p-4">
+                <div className="h-16 w-16 bg-purple-100 rounded-xl flex items-center justify-center text-2xl mr-4 flex-shrink-0">
                   {exercise.icon}
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-1">{exercise.name}</h3>
-                <div className="flex items-center gap-2 text-gray-600 text-xs mb-2">
-                  <span className="px-2 py-0.5 bg-purple-50 rounded-full">{exercise.duration} min</span>
-                  <span className="px-2 py-0.5 bg-blue-50 rounded-full">{exercise.difficulty}</span>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 mb-1">{exercise.name}</h3>
+                  <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                    {exercise.targetAreas.join(', ')}
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
+                      {exercise.duration} min
+                    </span>
+                    <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
+                      {exercise.difficulty}
+                    </span>
+                  </div>
                 </div>
-                <p className="text-gray-600 text-sm line-clamp-2">
-                  {exercise.targetAreas.join(', ')}
-                </p>
               </CardContent>
             </Card>
           ))}
