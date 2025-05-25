@@ -21,12 +21,40 @@ const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
   const [exerciseCompleted, setExerciseCompleted] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   
   const { playStartSound, playCompletionSound } = useAudioCues();
   
   // Get category color
   const categoryColor = getCategoryColor(exercise.category);
   const categoryIcon = getCategoryIcon(exercise.category);
+
+  // Initialize speech synthesis voices
+  useEffect(() => {
+    const loadVoices = () => {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        setAvailableVoices(voices);
+      }
+    };
+    
+    // Load voices immediately if available
+    loadVoices();
+    
+    // Set up event listener for when voices are loaded
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+    
+    return () => {
+      // Clean up
+      if (window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = null;
+      }
+      // Cancel any ongoing speech when component unmounts
+      window.speechSynthesis.cancel();
+    };
+  }, []);
 
   // Use our custom exercise timer hook
   const { 
@@ -62,10 +90,63 @@ const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
         : exercise.instructions[currentStep];
         
       if (instruction) {
+        // Cancel any ongoing speech
+        window.speechSynthesis.cancel();
+        
         const utterance = new SpeechSynthesisUtterance(instruction);
         utterance.lang = 'pt-BR';
-        utterance.rate = 0.9; // Slightly slower for better comprehension
-        speechSynthesis.speak(utterance);
+        utterance.rate = 0.85; // Slightly slower for better comprehension
+        utterance.pitch = 1.05; // Slightly higher pitch for more natural female voice
+        utterance.volume = 1.0; // Maximum volume
+        
+        // Find the best voice available
+        if (availableVoices.length > 0) {
+          // Try finding premium or enhanced voices first
+          const premiumVoice = availableVoices.find(voice => 
+            (voice.name.includes('Premium') || 
+             voice.name.includes('Neural') || 
+             voice.name.includes('Enhanced') || 
+             voice.name.includes('Natural')) && 
+            voice.lang.includes('pt-BR')
+          );
+          
+          if (premiumVoice) {
+            utterance.voice = premiumVoice;
+          } else {
+            // Second choice: Any Brazilian Portuguese voice
+            const brVoice = availableVoices.find(voice => 
+              voice.lang.includes('pt-BR')
+            );
+            
+            if (brVoice) {
+              utterance.voice = brVoice;
+            } else {
+              // Third choice: Any Portuguese voice
+              const ptVoice = availableVoices.find(voice => 
+                voice.lang.includes('pt')
+              );
+              
+              if (ptVoice) {
+                utterance.voice = ptVoice;
+              }
+            }
+          }
+        }
+        
+        // Add a slight pause at the beginning for more natural delivery
+        const shortPause = new SpeechSynthesisUtterance('.');
+        shortPause.volume = 0;
+        shortPause.rate = 0.1;
+        
+        // Speak with a more natural cadence
+        window.speechSynthesis.speak(shortPause);
+        
+        // Add event listener to monitor for errors
+        utterance.onerror = (event) => {
+          console.error('TTS Error:', event);
+        };
+        
+        window.speechSynthesis.speak(utterance);
       }
     }
   };
@@ -220,6 +301,16 @@ const ExerciseScreen: React.FC<ExerciseScreenProps> = ({
             <p className="large-text text-center text-xl font-medium mb-8" style={{ color: '#2D1441' }}>
               {isActive && !exerciseCompleted ? getCurrentInstruction() : ''}
             </p>
+
+            {/* Botão para voltar */}
+            {isActive && !exerciseCompleted && (
+              <button
+                onClick={onBack}
+                className="py-2 px-4 bg-white border border-purple-300 text-purple-700 rounded-lg font-medium mt-4"
+              >
+                Voltar ao modo normal
+              </button>
+            )}
           </div>
         </div>
         

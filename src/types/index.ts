@@ -99,6 +99,11 @@ export interface Exercise {
     energized: string;
   };
   evidenceLevel?: 'A' | 'B' | 'C'; // Evidence level (A: strongest, C: limited)
+  videoUrl?: string; // URL do vídeo do YouTube
+  isVideoExercise?: boolean; // Indica se é um exercício baseado em vídeo
+  videoSource?: string; // Fonte do vídeo (ex: "YouTube")
+  videoAuthor?: string; // Autor/canal do vídeo
+  videoDescription?: string; // Descrição específica do vídeo
 }
 
 export interface ExerciseProgress {

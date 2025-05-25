@@ -7,7 +7,7 @@ const cardVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-white/90 border-white/20 shadow-sm",
+        default: "bg-white/90 border-white/20 shadow-md",
         gradient: "bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-white/30 shadow-md",
         outlined: "bg-white/50 border-purple-100 shadow-sm",
         filled: "bg-purple-50 border-purple-100",
@@ -19,7 +19,7 @@ const cardVariants = cva(
       },
       hover: {
         none: "",
-        scale: "hover:scale-[1.02] cursor-pointer",
+        scale: "hover:scale-[1.02] hover:shadow-lg cursor-pointer",
         shadow: "hover:shadow-lg cursor-pointer",
         lift: "hover:shadow-lg hover:-translate-y-1 cursor-pointer",
       }

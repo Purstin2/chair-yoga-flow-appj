@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Recipe, RecipeCategory } from '@/types';
-import { recipes, recipeCategories } from '@/data/recipes';
+import { Recipe } from '@/types';
+import { recipes } from '@/data/recipes';
+import { recipeCategories } from '@/data/recipeCategories';
 import { Card, CardContent } from './ui/Card';
 import { Search, Clock, Filter } from 'lucide-react';
 import Header from './Header';
@@ -29,13 +30,21 @@ const RecipeLibrary: React.FC<RecipeLibraryProps> = ({
     { id: 'hipertensao', label: 'Hipertensão' },
     { id: 'colesterol', label: 'Colesterol Alto' },
     { id: 'gastrite', label: 'Gastrite' },
-    { id: 'intestino', label: 'Intestino Irritável' }
+    { id: 'intestino', label: 'Intestino Irritável' },
+    { id: 'refluxo', label: 'Refluxo' },
+    { id: 'lactose', label: 'Intolerância à Lactose' },
+    { id: 'gluten', label: 'Sensibilidade ao Glúten' },
+    { id: 'hipotireoidismo', label: 'Hipotireoidismo' },
+    { id: 'alergia-nozes', label: 'Alergia a Nozes' },
+    { id: 'alergia-ovos', label: 'Alergia a Ovos' },
+    { id: 'vegetariano', label: 'Vegetariano/Vegano' }
   ];
 
   const timeOptions = [
     { id: 5, label: 'Até 5 minutos' },
     { id: 10, label: 'Até 10 minutos' },
-    { id: 15, label: 'Até 15 minutos' }
+    { id: 15, label: 'Até 15 minutos' },
+    { id: 30, label: 'Até 30 minutos' }
   ];
 
   const toggleDietaryFilter = (id: string) => {
@@ -93,7 +102,7 @@ const RecipeLibrary: React.FC<RecipeLibraryProps> = ({
       <Header 
         user={user} 
         onProfileClick={onProfileClick}
-        title="Nutrição Anti-inflamatória" 
+        title="Nutrição Terapêutica" 
         showBackButton 
         onBackClick={onBack}
       />
@@ -207,7 +216,7 @@ const RecipeLibrary: React.FC<RecipeLibraryProps> = ({
             {filteredRecipes.map(recipe => (
               <Card
                 key={recipe.id}
-                className="overflow-hidden transition-shadow hover:shadow-md cursor-pointer"
+                className="overflow-hidden transition-shadow hover:shadow-md cursor-pointer border border-gray-200"
                 onClick={() => setSelectedRecipe(recipe)}
               >
                 <div className="aspect-video relative">
@@ -262,17 +271,10 @@ const RecipeLibrary: React.FC<RecipeLibraryProps> = ({
 };
 
 // Helper function to get emoji based on category
+// Busca o ícone correspondente à categoria no arquivo recipeCategories.ts
 function getCategoryEmoji(category: string): string {
-  const emojiMap: Record<string, string> = {
-    'Café da Manhã': '🌅',
-    'Almoço': '🥗',
-    'Jantar': '🍲',
-    'Bebida': '🥤',
-    'Lanche': '🥪',
-    'Sobremesa': '🍰'
-  };
-  
-  return emojiMap[category] || '🍽️';
+  const categoryObj = recipeCategories.find(cat => cat.name === category);
+  return categoryObj?.icon || '🍽️';
 }
 
 export default RecipeLibrary;

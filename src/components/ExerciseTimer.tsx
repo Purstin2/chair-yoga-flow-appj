@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   PlayIcon, 
-  PauseIcon, 
-  StopIcon, 
-  ArrowPathIcon,
   SpeakerWaveIcon,
-  SpeakerXMarkIcon
+  CheckIcon,
+  XMarkIcon
 } from '@heroicons/react/24/solid';
 import useAudioCues from '@/hooks/useAudioCues';
 
@@ -18,6 +16,7 @@ interface ExerciseTimerProps {
   totalSteps?: number;
   progress?: number;
   isAutoMode?: boolean;
+  currentInstruction?: string;
 }
 
 const ExerciseTimer: React.FC<ExerciseTimerProps> = ({
@@ -28,11 +27,13 @@ const ExerciseTimer: React.FC<ExerciseTimerProps> = ({
   currentStep = 0,
   totalSteps = 1,
   progress = 0,
-  isAutoMode = false
+  isAutoMode = false,
+  currentInstruction = ""
 }) => {
   const [timeLeft, setTimeLeft] = useState(initialDuration);
   const [isRunning, setIsRunning] = useState(autoStart);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [showCompletionDialog, setShowCompletionDialog] = useState(false);
   
   const timerRef = useRef<number | null>(null);
   const { playStartSound, playStepTransition, playCompletionSound, playFallbackBeep } = useAudioCues();
@@ -62,6 +63,11 @@ const ExerciseTimer: React.FC<ExerciseTimerProps> = ({
   // Timer logic
   useEffect(() => {
     if (isRunning) {
+      // Clear any existing interval first to prevent duplicates
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      
       timerRef.current = window.setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
@@ -96,41 +102,19 @@ const ExerciseTimer: React.FC<ExerciseTimerProps> = ({
       navigator.vibrate([200, 100, 200]);
     }
     
-    // Notify parent component
+    // Show completion dialog
+    setShowCompletionDialog(true);
+  };
+
+  const confirmCompletion = () => {
+    setShowCompletionDialog(false);
     onComplete();
   };
 
-  const startTimer = () => {
-    if (soundEnabled) {
-      playStartSound();
-    }
-    setIsRunning(true);
-  };
-
-  const pauseTimer = () => {
-    setIsRunning(false);
-  };
-
-  const stopTimer = () => {
-    pauseTimer();
-  };
-
-  const resetTimer = () => {
-    pauseTimer();
+  const restartExercise = () => {
+    setShowCompletionDialog(false);
     setTimeLeft(initialDuration);
-  };
-
-  const toggleSound = () => {
-    setSoundEnabled(!soundEnabled);
-  };
-
-  // Calculate timer progress percentage
-  const getTimerProgress = () => {
-    // If in auto mode, use the progress provided
-    if (isAutoMode && progress !== undefined) {
-      return progress;
-    }
-    return (timeLeft / initialDuration) * 100;
+    setIsRunning(false);
   };
 
   // Format time as MM:SS
@@ -140,195 +124,75 @@ const ExerciseTimer: React.FC<ExerciseTimerProps> = ({
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  // Calculate stroke-dasharray and stroke-dashoffset for circle animation
-  const calculateCircleValues = () => {
-    const radius = 45; // Circle radius
-    const circumference = 2 * Math.PI * radius;
-    const dashoffset = circumference * (1 - getTimerProgress() / 100);
-    
-    return {
-      circumference,
-      dashoffset
-    };
-  };
-
-  const { circumference, dashoffset } = calculateCircleValues();
+  // If showing completion dialog
+  if (showCompletionDialog) {
+    return (
+      <div className="flex flex-col items-center justify-center">
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 text-center">
+          <h3 className="text-lg font-medium text-green-800 mb-2">Terminou o exercício?</h3>
+          <div className="flex justify-center gap-3 mt-4">
+            <button
+              onClick={confirmCompletion}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium flex items-center"
+            >
+              <CheckIcon className="h-5 w-5 mr-2" />
+              Sim, concluí
+            </button>
+            <button
+              onClick={restartExercise}
+              className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium flex items-center"
+            >
+              <XMarkIcon className="h-5 w-5 mr-2" />
+              Não, refazer
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Simplified auto mode version (minimal controls)
   if (isAutoMode) {
     return (
       <div className="flex flex-col items-center">
-        {/* Circular Timer */}
-        <div className="relative w-40 h-40 mb-4">
-          <svg className="w-full h-full" viewBox="0 0 100 100">
-            {/* Background circle */}
-            <circle 
-              cx="50" 
-              cy="50" 
-              r="45"
-              fill="none"
-              stroke="#e2e8f0"
-              strokeWidth="5"
-            />
-            
-            {/* Progress circle */}
-            <circle 
-              cx="50" 
-              cy="50" 
-              r="45"
-              fill="none"
-              stroke="#7432B4"
-              strokeWidth="5"
-              strokeLinecap="round"
-              strokeDasharray={circumference}
-              strokeDashoffset={dashoffset}
-              transform="rotate(-90 50 50)"
-              className="transition-all duration-300"
-            />
-            
-            {/* Time text */}
-            <text
-              x="50"
-              y="45"
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fontSize="16"
-              fontWeight="bold"
-              fill="#1a202c"
-            >
-              {formatTime(timeLeft)}
-            </text>
-            
-            {/* Step counter */}
-            <text
-              x="50"
-              y="65"
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fontSize="12"
-              fill="#4B5563"
-            >
-              Passo {currentStep + 1}/{totalSteps}
-            </text>
-          </svg>
-        </div>
+        {/* Current instruction */}
+        {currentInstruction && (
+          <p className="text-lg text-center text-gray-800 mb-4">
+            {currentInstruction}
+          </p>
+        )}
         
-        {/* Sound toggle only */}
-        <button
-          onClick={toggleSound}
-          className={`w-12 h-12 rounded-full flex items-center justify-center shadow transition-colors ${
-            soundEnabled 
-              ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' 
-              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-          }`}
-          aria-label={soundEnabled ? "Desativar som" : "Ativar som"}
-        >
-          {soundEnabled ? (
-            <SpeakerWaveIcon className="h-6 w-6" />
-          ) : (
-            <SpeakerXMarkIcon className="h-6 w-6" />
-          )}
-        </button>
+        {/* Step counter text */}
+        <p className="text-sm text-gray-600 mb-4">
+          Passo {currentStep + 1}/{totalSteps} - {formatTime(timeLeft)}
+        </p>
       </div>
     );
   }
 
-  // Regular version with full controls
+  // Regular version - Removido timer circular e botões de controle, mantendo apenas os novos botões
   return (
     <div className="flex flex-col items-center">
-      {/* Circular Timer */}
-      <div className="relative w-40 h-40 mb-6">
-        <svg className="w-full h-full" viewBox="0 0 100 100">
-          {/* Background circle */}
-          <circle 
-            cx="50" 
-            cy="50" 
-            r="45"
-            fill="none"
-            stroke="#e2e8f0"
-            strokeWidth="5"
-          />
-          
-          {/* Progress circle */}
-          <circle 
-            cx="50" 
-            cy="50" 
-            r="45"
-            fill="none"
-            stroke="#7432B4"
-            strokeWidth="5"
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={dashoffset}
-            transform="rotate(-90 50 50)"
-            className="transition-all duration-300"
-          />
-          
-          {/* Time text */}
-          <text
-            x="50"
-            y="50"
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fontSize="16"
-            fontWeight="bold"
-            fill="#1a202c"
-          >
-            {formatTime(timeLeft)}
-          </text>
-        </svg>
-      </div>
+      {/* Removido o texto que mostra o tempo restante */}
       
-      {/* Control buttons */}
-      <div className="flex justify-center space-x-4">
-        {!isRunning ? (
-          <button
-            onClick={startTimer}
-            className="w-14 h-14 bg-purple-600 rounded-full flex items-center justify-center text-white shadow-lg transition-colors hover:bg-purple-700"
-            aria-label="Iniciar"
-          >
-            <PlayIcon className="h-7 w-7" />
-          </button>
-        ) : (
-          <button
-            onClick={pauseTimer}
-            className="w-14 h-14 bg-gray-600 rounded-full flex items-center justify-center text-white shadow-lg transition-colors hover:bg-gray-700"
-            aria-label="Pausar"
-          >
-            <PauseIcon className="h-7 w-7" />
-          </button>
-        )}
-        
+      {/* Novos botões - garantir que estes sejam os únicos botões */}
+      <div className="grid grid-cols-2 gap-3 mt-2 w-full">
         <button
-          onClick={stopTimer}
-          className="w-14 h-14 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 shadow transition-colors hover:bg-gray-300"
-          aria-label="Parar"
+          onClick={() => window.dispatchEvent(new CustomEvent('startAudioGuide'))}
+          className="py-3 bg-purple-600 text-white rounded-lg font-medium flex items-center justify-center"
+          aria-label="Iniciar guia com áudio"
         >
-          <StopIcon className="h-7 w-7" />
+          <SpeakerWaveIcon className="h-5 w-5 mr-2" />
+          Guia com Áudio
         </button>
-        
+    
         <button
-          onClick={resetTimer}
-          className="w-14 h-14 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 shadow transition-colors hover:bg-gray-300"
-          aria-label="Reiniciar"
+          onClick={() => window.dispatchEvent(new CustomEvent('startStepByStep'))}
+          className="py-3 bg-white border border-purple-300 text-purple-700 rounded-lg font-medium flex items-center justify-center"
+          aria-label="Ver passo a passo em texto"
         >
-          <ArrowPathIcon className="h-7 w-7" />
-        </button>
-        
-        <button
-          onClick={toggleSound}
-          className={`w-14 h-14 rounded-full flex items-center justify-center shadow transition-colors ${
-            soundEnabled 
-              ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' 
-              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-          }`}
-          aria-label={soundEnabled ? "Desativar som" : "Ativar som"}
-        >
-          {soundEnabled ? (
-            <SpeakerWaveIcon className="h-7 w-7" />
-          ) : (
-            <SpeakerXMarkIcon className="h-7 w-7" />
-          )}
+          <PlayIcon className="h-5 w-5 mr-2" />
+          Passo a Passo
         </button>
       </div>
     </div>

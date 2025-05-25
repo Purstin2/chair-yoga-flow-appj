@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { ArrowLeftIcon, MagnifyingGlassIcon, ChevronRightIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, MagnifyingGlassIcon, ChevronRightIcon, ClockIcon, VideoCameraIcon } from '@heroicons/react/24/outline';
 import { Exercise, User } from '@/types';
 import { Card, CardContent } from './ui/Card';
 import Header from './Header';
 import { 
   FiActivity, FiHeart, FiAward, FiRotateCcw, 
-  FiRefreshCw, FiSmile, FiSun, FiMoon, FiMove, FiWind
+  FiRefreshCw, FiSmile, FiSun, FiMoon, FiMove, FiWind,
+  FiYoutube
 } from 'react-icons/fi';
 import { getCategoryIcon, IconType } from '@/data/exerciseCategories';
+import videoExercises from '@/data/videoExercises';
 
 interface ExerciseLibraryProps {
   onBack: () => void;
@@ -16,6 +18,8 @@ interface ExerciseLibraryProps {
   onProfileClick: () => void;
   exercises?: Exercise[];
 }
+
+type ExerciseTab = 'standard' | 'videos';
 
 const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ 
   onBack, 
@@ -26,12 +30,16 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState<ExerciseTab>('standard');
+
+  // Exercícios a serem exibidos com base na aba selecionada
+  const displayExercises = activeTab === 'standard' ? exercises : videoExercises;
 
   // Get unique categories from exercises
-  const categories = Array.from(new Set(exercises.map(ex => ex.category)));
+  const categories = Array.from(new Set(displayExercises.map(ex => ex.category)));
 
   // Filter exercises based on category and search term
-  const filteredExercises = exercises.filter(exercise => {
+  const filteredExercises = displayExercises.filter(exercise => {
     const matchesCategory = !selectedCategory || exercise.category === selectedCategory;
     const matchesSearch = exercise.name.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCategory && matchesSearch;
@@ -76,6 +84,38 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({
       />
 
       <div className="px-4 max-w-md mx-auto">
+        {/* Abas de Exercícios */}
+        <div className="flex mb-4 bg-gray-100 rounded-lg p-1">
+          <button
+            onClick={() => {
+              setActiveTab('standard');
+              setSelectedCategory(null);
+            }}
+            className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center ${
+              activeTab === 'standard'
+                ? 'bg-white text-purple-700 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <FiActivity className="h-4 w-4 mr-1.5" />
+            Exercícios Padrão
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('videos');
+              setSelectedCategory(null);
+            }}
+            className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center ${
+              activeTab === 'videos'
+                ? 'bg-white text-purple-700 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <FiYoutube className="h-4 w-4 mr-1.5" />
+            Exercícios em Vídeo
+          </button>
+        </div>
+
         {/* Search Bar */}
         <div className="relative mb-4">
           <input
@@ -124,7 +164,7 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({
           {filteredExercises.map(exercise => (
             <Card 
               key={exercise.id}
-              className="overflow-hidden cursor-pointer transition-transform hover:scale-[1.01]"
+              className="overflow-hidden cursor-pointer transition-transform hover:scale-[1.01] border border-gray-200"
               onClick={() => onSelectExercise(exercise)}
             >
               <CardContent className="p-0">
@@ -143,6 +183,12 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({
                           alt={exercise.name}
                           className="w-full h-full object-cover"
                         />
+                      </div>
+                    )}
+                    {exercise.isVideoExercise && (
+                      <div className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-md flex items-center">
+                        <VideoCameraIcon className="h-4 w-4 mr-1" />
+                        <span className="text-xs font-medium">Vídeo</span>
                       </div>
                     )}
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
@@ -180,7 +226,14 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({
                           </span>
                         )}
                       </div>
-                      <ChevronRightIcon className="h-4 w-4 text-purple-500" />
+                      {exercise.isVideoExercise && exercise.videoAuthor && (
+                        <span className="text-xs text-gray-500">
+                          por {exercise.videoAuthor}
+                        </span>
+                      )}
+                      {!exercise.isVideoExercise && (
+                        <ChevronRightIcon className="h-4 w-4 text-purple-500" />
+                      )}
                     </div>
                   </div>
                 </div>

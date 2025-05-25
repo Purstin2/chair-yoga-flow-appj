@@ -1,57 +1,129 @@
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 
 /**
  * Hook for managing audio cues during exercise execution
  * Provides functions for different sound events during yoga practice
  */
 const useAudioCues = () => {
+  const [audioLoaded, setAudioLoaded] = useState(false);
+  const [customVoice, setCustomVoice] = useState<boolean>(false);
+  
+  // Preload audio files for better performance
+  useEffect(() => {
+    const preloadAudio = async () => {
+      try {
+        const audioFiles = [
+          '/sounds/gentle-start.mp3',
+          '/sounds/soft-chime.mp3',
+          '/sounds/gentle-complete.mp3',
+          // Add custom voice recordings paths here
+          '/sounds/voice/start-exercise.mp3',
+          '/sounds/voice/next-step.mp3',
+          '/sounds/voice/complete.mp3'
+        ];
+        
+        // Check if custom voice files exist
+        const hasCustomVoice = await Promise.all(
+          audioFiles.slice(3).map(file => 
+            fetch(file)
+              .then(response => response.ok)
+              .catch(() => false)
+          )
+        ).then(results => results.every(result => result));
+        
+        setCustomVoice(hasCustomVoice);
+        setAudioLoaded(true);
+      } catch (error) {
+        console.error('Error preloading audio:', error);
+        setAudioLoaded(true); // Still mark as loaded to avoid blocking the app
+      }
+    };
+    
+    preloadAudio();
+  }, []);
+
   /**
    * Plays a gentle sound when starting an exercise
    */
   const playStartSound = useCallback(() => {
     try {
-      // Som suave de início
-      const audio = new Audio('/sounds/gentle-start.mp3');
-      audio.volume = 0.3;
-      audio.play().catch(error => {
-        console.error('Error playing start sound:', error);
-      });
+      // Use custom voice recording if available
+      const audioFile = customVoice 
+        ? '/sounds/voice/start-exercise.mp3' 
+        : '/sounds/gentle-start.mp3';
+        
+      const audio = new Audio(audioFile);
+      audio.volume = 0.4;
+      
+      // Promise-based play with fallback
+      const playPromise = audio.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error('Error playing start sound:', error);
+          // Fallback to synthetic beep if audio fails
+          playFallbackBeep(440, 500, 0.3);
+        });
+      }
     } catch (error) {
       console.error('Error creating audio element:', error);
+      playFallbackBeep(440, 500, 0.3);
     }
-  }, []);
+  }, [customVoice]);
   
   /**
    * Plays a soft chime sound when transitioning between exercise steps
    */
   const playStepTransition = useCallback(() => {
     try {
-      // Som discreto de transição
-      const audio = new Audio('/sounds/soft-chime.mp3');
-      audio.volume = 0.2;
-      audio.play().catch(error => {
-        console.error('Error playing transition sound:', error);
-      });
+      // Use custom voice recording if available
+      const audioFile = customVoice 
+        ? '/sounds/voice/next-step.mp3' 
+        : '/sounds/soft-chime.mp3';
+        
+      const audio = new Audio(audioFile);
+      audio.volume = 0.3;
+      
+      const playPromise = audio.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error('Error playing transition sound:', error);
+          playFallbackBeep(660, 300, 0.2);
+        });
+      }
     } catch (error) {
       console.error('Error creating audio element:', error);
+      playFallbackBeep(660, 300, 0.2);
     }
-  }, []);
+  }, [customVoice]);
   
   /**
    * Plays a gentle completion sound when exercise is finished
    */
   const playCompletionSound = useCallback(() => {
     try {
-      // Som de conquista suave
-      const audio = new Audio('/sounds/gentle-complete.mp3');
-      audio.volume = 0.4;
-      audio.play().catch(error => {
-        console.error('Error playing completion sound:', error);
-      });
+      // Use custom voice recording if available
+      const audioFile = customVoice 
+        ? '/sounds/voice/complete.mp3' 
+        : '/sounds/gentle-complete.mp3';
+        
+      const audio = new Audio(audioFile);
+      audio.volume = 0.5;
+      
+      const playPromise = audio.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error('Error playing completion sound:', error);
+          playFallbackBeep(880, 700, 0.4);
+        });
+      }
     } catch (error) {
       console.error('Error creating audio element:', error);
+      playFallbackBeep(880, 700, 0.4);
     }
-  }, []);
+  }, [customVoice]);
 
   // Fallback to beep sound if custom sounds are not available
   const playFallbackBeep = useCallback((frequency = 440, duration = 500, volume = 0.3) => {
@@ -82,7 +154,9 @@ const useAudioCues = () => {
     playStartSound, 
     playStepTransition, 
     playCompletionSound,
-    playFallbackBeep
+    playFallbackBeep,
+    audioLoaded,
+    customVoice
   };
 };
 

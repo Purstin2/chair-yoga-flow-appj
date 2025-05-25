@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from 'react';
 import { User, UserProgress, UserQuizData, Exercise } from "@/types";
 import Navigation from "@/components/Navigation";
 import Dashboard from "@/components/Dashboard";
@@ -10,12 +10,12 @@ import MeditationLibrary from "@/components/MeditationLibrary";
 import ProfileScreen from "@/components/ProfileScreen";
 import MedicalQuiz from "@/components/MedicalQuiz";
 import MedicalDisclaimer from "@/components/MedicalDisclaimer";
-import OnboardingTutorial from "@/components/OnboardingTutorial";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { exercises } from "@/data/exercises";
 import allExercises from "@/data/allScientificExercises";
+import videoExercises from "@/data/videoExercises";
 
-type View = 'dashboard' | 'program' | 'exercises' | 'exercise-detail' | 'recipes' | 'meditation' | 'profile' | 'quiz' | 'disclaimer' | 'tutorial' | 'nutrition';
+type View = 'dashboard' | 'program' | 'exercises' | 'exercise-detail' | 'recipes' | 'meditation' | 'profile' | 'quiz' | 'disclaimer' | 'nutrition';
 
 // Default user for all
 const defaultUser: User = {
@@ -184,25 +184,17 @@ const Index = () => {
   const handleDisclaimerAccept = () => {
     setCurrentUser(prev => ({
       ...prev,
-      disclaimerAccepted: true
-    }));
-    
-    setCurrentView('tutorial');
-  };
-
-  const handleDisclaimerSupport = () => {
-    // In a real app, this would open a support chat or contact form
-    alert('Suporte não disponível nesta versão de demonstração.');
-  };
-
-  const handleTutorialComplete = () => {
-    setCurrentUser(prev => ({
-      ...prev,
+      disclaimerAccepted: true,
       tutorialCompleted: true,
       onboardingCompleted: true
     }));
     
     setCurrentView('dashboard');
+  };
+
+  const handleDisclaimerSupport = () => {
+    // In a real app, this would open a support chat or contact form
+    alert('Suporte não disponível nesta versão de demonstração.');
   };
 
   const handleUpdateUser = (userData: User) => {
@@ -271,13 +263,15 @@ const Index = () => {
 
   const handleExerciseSelect = (exercise: Exercise) => {
     setSelectedExercise(exercise);
-    // Ir diretamente para o detalhe do exercício
     setCurrentView('exercise-detail');
   };
 
   const handleProfileClick = () => {
     setCurrentView('profile');
   };
+
+  // Combinar todos os exercícios para passar para o ExerciseLibrary
+  const allAvailableExercises = [...exercises, ...allExercises];
 
   // Show onboarding flows if needed
   if (currentView === 'quiz') {
@@ -292,14 +286,6 @@ const Index = () => {
     return (
       <ErrorBoundary fallback={<div>Erro ao carregar disclaimer. Por favor reinicie o app.</div>}>
         <MedicalDisclaimer onAccept={handleDisclaimerAccept} onSupport={handleDisclaimerSupport} />
-      </ErrorBoundary>
-    );
-  }
-
-  if (currentView === 'tutorial') {
-    return (
-      <ErrorBoundary fallback={<div>Erro ao carregar tutorial. Por favor reinicie o app.</div>}>
-        <OnboardingTutorial onComplete={handleTutorialComplete} userName={currentUser.name} />
       </ErrorBoundary>
     );
   }
@@ -327,6 +313,7 @@ const Index = () => {
                 onStartExercise={() => setCurrentView('exercises')}
                 onViewProgram={() => setCurrentView('program')}
                 onProfileClick={handleProfileClick}
+                onResetProgress={handleResetProgress}
               />
             )}
 
@@ -336,27 +323,25 @@ const Index = () => {
                 onBack={() => setCurrentView('dashboard')}
                 user={currentUser}
                 onProfileClick={handleProfileClick}
-                onSelectDay={(day) => {
-                  // Implement day selection logic
-                  setCurrentView('exercises');
-                }}
+                onSelectExercise={handleExerciseSelect}
+                onComplete={handleExerciseComplete}
               />
             )}
 
             {currentView === 'exercises' && (
               <ExerciseLibrary
+                exercises={allAvailableExercises}
                 onBack={() => setCurrentView('dashboard')}
                 onSelectExercise={handleExerciseSelect}
                 user={currentUser}
                 onProfileClick={handleProfileClick}
-                exercises={allExercises}
               />
             )}
 
             {currentView === 'exercise-detail' && selectedExercise && (
               <ExerciseDetail
                 exercise={selectedExercise}
-                isCompleted={userProgress.completedExercises.includes(selectedExercise.id.toString())}
+                isCompleted={userProgress.completedExercises.includes(String(selectedExercise.id))}
                 onBack={() => setCurrentView('exercises')}
                 onComplete={() => handleExerciseComplete(selectedExercise.id)}
                 user={currentUser}

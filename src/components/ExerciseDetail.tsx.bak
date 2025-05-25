@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   ArrowLeftIcon, 
   CheckIcon, 
@@ -44,51 +44,6 @@ interface ExerciseDetailProps {
   onProfileClick: () => void;
 }
 
-// Componente para incorporar vídeos do YouTube usando iframe diretamente
-const DirectYouTubeEmbed = ({ videoUrl }: { videoUrl: string }) => {
-  // Para extrair apenas o ID do vídeo da URL
-  const getVideoId = (url: string): string => {
-    if (url.includes('youtube.com/embed/')) {
-      // Já é um URL de incorporação, extrair o ID
-      const parts = url.split('youtube.com/embed/');
-      if (parts.length > 1) {
-        // Remover qualquer parâmetro de consulta
-        return parts[1].split('?')[0];
-      }
-    }
-    
-    // Para URLs normais do YouTube
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : '';
-  };
-  
-  const videoId = getVideoId(videoUrl);
-  
-  if (!videoId) {
-    return (
-      <div className="aspect-video w-full bg-gray-200 rounded-2xl mb-4 flex items-center justify-center">
-        <p className="text-gray-500">Vídeo não disponível</p>
-      </div>
-    );
-  }
-  
-  // Usar o formato embed direto do YouTube
-  return (
-    <div className="aspect-video w-full rounded-2xl mb-4 overflow-hidden">
-      <iframe 
-        width="100%" 
-        height="100%" 
-        src={`https://www.youtube.com/embed/${videoId}`}
-        title="YouTube video player" 
-        frameBorder="0" 
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-        allowFullScreen
-      ></iframe>
-    </div>
-  );
-};
-
 const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
   exercise,
   isCompleted,
@@ -104,77 +59,11 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
   const [showStepByStepMode, setShowStepByStepMode] = useState(false);
   const [showAutoMode, setShowAutoMode] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
-  
-  // Diálogo de confirmação ao final do exercício
-  const [showCompletionDialog, setShowCompletionDialog] = useState(false);
-  
-  // Determine if the exercise has step-by-step execution info (mover para cima)
-  const hasDetailedExecution = exercise.executionSteps && exercise.executionSteps.length > 0;
-  
-  // Mover os hooks do modo step-by-step para o nível superior
-  const [stepProgress, setStepProgress] = useState(0);
-  const [stepTimeLeft, setStepTimeLeft] = useState(
-    hasDetailedExecution && exercise.executionSteps 
-      ? exercise.executionSteps[currentStep]?.duration 
-      : 15
-  );
-  const stepTimerRef = useRef<number | null>(null);
-  const [isStepRunning, setIsStepRunning] = useState(false);
   const stepsRef = useRef<HTMLDivElement>(null);
 
   // Get category color and icon
   const categoryColor = getCategoryColor(exercise.category);
   const categoryIconType = getCategoryIcon(exercise.category);
-
-  // Iniciar o timer para o passo atual
-  const startStepTimer = useCallback(() => {
-    if (!showStepByStepMode) return;
-    
-    if (stepTimerRef.current) {
-      clearInterval(stepTimerRef.current);
-    }
-
-    const stepDuration = hasDetailedExecution && exercise.executionSteps 
-      ? exercise.executionSteps[currentStep]?.duration 
-      : 15;
-    
-    setStepTimeLeft(stepDuration);
-    setStepProgress(0);
-    setIsStepRunning(true);
-    
-    stepTimerRef.current = window.setInterval(() => {
-      setStepTimeLeft(prev => {
-        if (prev <= 1) {
-          if (stepTimerRef.current) {
-            clearInterval(stepTimerRef.current);
-          }
-          setIsStepRunning(false);
-          
-          // Avançar para o próximo passo quando o tempo acabar
-          const totalSteps = hasDetailedExecution && exercise.executionSteps 
-            ? exercise.executionSteps.length 
-            : exercise.instructions.length;
-            
-          if (currentStep < totalSteps - 1) {
-            setCurrentStep(prev => prev + 1);
-          } else {
-            // Exercício completo
-            handleTimerComplete();
-          }
-          
-          return 0;
-        }
-        
-        // Atualizar o progresso
-        const duration = hasDetailedExecution && exercise.executionSteps 
-          ? exercise.executionSteps[currentStep]?.duration 
-          : 15;
-        
-        setStepProgress(((duration - prev + 1) / duration) * 100);
-        return prev - 1;
-      });
-    }, 1000);
-  }, [currentStep, hasDetailedExecution, exercise.executionSteps, exercise.instructions?.length, showStepByStepMode]);
 
   // Function to get category icon based on type
   const getCategoryIconComponent = (iconType: IconType) => {
@@ -237,64 +126,16 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
     };
   }, []);
 
-  // Iniciar timer quando o passo mudar no modo step-by-step
-  useEffect(() => {
-    if (!showStepByStepMode) return;
-    
-    if (hasDetailedExecution && exercise.executionSteps) {
-      setStepTimeLeft(exercise.executionSteps[currentStep]?.duration || 15);
-    } else {
-      setStepTimeLeft(15); // Tempo padrão se não houver duração específica
-    }
-    
-    setStepProgress(0);
-    startStepTimer();
-    
-    // Limpar o timer quando desmontar
-    return () => {
-      if (stepTimerRef.current) {
-        clearInterval(stepTimerRef.current);
-      }
-    };
-  }, [currentStep, hasDetailedExecution, exercise.executionSteps, startStepTimer, showStepByStepMode]);
-
-  // Limpar timer quando o modo step-by-step for desativado
-  useEffect(() => {
-    if (!showStepByStepMode && stepTimerRef.current) {
-      clearInterval(stepTimerRef.current);
-      setIsStepRunning(false);
-    }
-  }, [showStepByStepMode]);
-
   const handleTimerComplete = () => {
-    // Mostrar diálogo de confirmação em vez de completar automaticamente
-    setShowCompletionDialog(true);
-  };
-
-  const handleConfirmCompletion = () => {
-    // Usuário confirmou que concluiu o exercício
+    // Show confetti and mark as completed
     setShowConfetti(true);
     setCompleted(true);
-    setShowCompletionDialog(false);
     
     // Notify parent
     setTimeout(() => {
       onComplete();
       setShowConfetti(false);
     }, 3000);
-  };
-
-  const handleRejectCompletion = () => {
-    // Usuário quer refazer o exercício
-    setShowCompletionDialog(false);
-    
-    // Resetar para o primeiro passo
-    setCurrentStep(0);
-    
-    // Reiniciar o timer se estiver no modo passo a passo
-    if (showStepByStepMode) {
-      startStepTimer();
-    }
   };
 
   const handleComplete = () => {
@@ -376,6 +217,9 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
     }
   };
 
+  // Determine if the exercise has step-by-step execution info
+  const hasDetailedExecution = exercise.executionSteps && exercise.executionSteps.length > 0;
+
   // Calculate total exercise duration in seconds
   const calculateDuration = () => {
     // If using executionSteps, calculate from those
@@ -391,7 +235,7 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
     return (
       <ExerciseScreen
         exercise={exercise}
-        onComplete={handleTimerComplete}
+        onComplete={onComplete}
         onBack={() => setShowAutoMode(false)}
       />
     );
@@ -491,39 +335,6 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
     );
   }
 
-  // Diálogo de confirmação de conclusão
-  const CompletionDialog = () => (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl maxw-sm w-full p-6 shadow-lg">
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckIcon className="w-8 h-8 text-purple-600" />
-          </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">Exercício Finalizado!</h3>
-          <p className="text-gray-600">Você concluiu com sucesso este exercício?</p>
-        </div>
-        
-        <div className="grid grid-cols-1 gap-3">
-          <button 
-            onClick={handleConfirmCompletion}
-            className="w-full py-3 bg-purple-600 text-white rounded-xl font-medium flex items-center justify-center gap-2 transition-colors hover:bg-purple-700"
-          >
-            <CheckIcon className="h-5 w-5" />
-            Sim, concluí
-          </button>
-          
-          <button 
-            onClick={handleRejectCompletion}
-            className="w-full py-3 bg-gray-200 text-gray-800 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors hover:bg-gray-300"
-          >
-            <ArrowPathIcon className="h-5 w-5" />
-            Não, refazer
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
   // Step-by-step mode
   if (showStepByStepMode) {
     return (
@@ -570,27 +381,24 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
               : exercise.instructions[currentStep]}
           </p>
           
-          <div className="mb-8 w-full max-w-sm">
-            <p className="text-center text-gray-600 mb-2">
-              Duração: {stepTimeLeft} segundos
-            </p>
-            <div className="w-full bg-gray-200 rounded-full h-4">
-              <div 
-                className="h-4 rounded-full bg-purple-600 transition-all duration-500 ease-in-out"
-                style={{ width: `${stepProgress}%` }}
-              />
+          {hasDetailedExecution && exercise.executionSteps && (
+            <div className="mb-8 w-full max-w-sm">
+              <p className="text-center text-gray-600 mb-2">
+                Duração: {exercise.executionSteps[currentStep]?.duration} segundos
+              </p>
+              <div className="w-full bg-gray-200 rounded-full h-4">
+                <div 
+                  className="h-4 rounded-full bg-purple-600 transition-all duration-500 ease-in-out"
+                  style={{ width: '0%' }}
+                />
+              </div>
             </div>
-          </div>
+          )}
         </div>
             
         <div className="bg-gray-100 p-4 flex justify-around">
           <button
-            onClick={() => {
-              if (stepTimerRef.current) {
-                clearInterval(stepTimerRef.current);
-              }
-              setCurrentStep(prev => Math.max(0, prev - 1));
-            }}
+            onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
             disabled={currentStep === 0}
             className="p-3 rounded-full bg-white shadow disabled:opacity-50"
             aria-label="Passo anterior"
@@ -599,40 +407,22 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
           </button>
           
           <button
-            onClick={() => {
-              // Pausar/Retomar o timer
-              if (isStepRunning) {
-                if (stepTimerRef.current) {
-                  clearInterval(stepTimerRef.current);
-                }
-                setIsStepRunning(false);
-              } else {
-                startStepTimer();
-              }
-            }}
+            onClick={() => speakInstruction(hasDetailedExecution && exercise.executionSteps
+              ? exercise.executionSteps[currentStep]?.instruction
+              : exercise.instructions[currentStep])}
             className="p-3 rounded-full bg-white shadow"
-            aria-label={isStepRunning ? "Pausar" : "Iniciar"}
+            aria-label="Ouvir instrução"
           >
-            {isStepRunning ? (
-              <PauseIcon className="h-6 w-6 text-purple-700" />
-            ) : (
-              <PlayIcon className="h-6 w-6 text-purple-700" />
-            )}
+            <SpeakerWaveIcon className="h-6 w-6 text-purple-700" />
           </button>
-          
-          <button
-            onClick={() => {
-              if (stepTimerRef.current) {
-                clearInterval(stepTimerRef.current);
-              }
-              const totalSteps = hasDetailedExecution && exercise.executionSteps 
-                ? exercise.executionSteps.length 
-                : exercise.instructions.length;
               
-              if (currentStep < totalSteps - 1) {
-                setCurrentStep(prev => prev + 1);
-              }
-            }}
+          <button
+            onClick={() => setCurrentStep(prev => Math.min(
+              (hasDetailedExecution && exercise.executionSteps 
+                ? exercise.executionSteps.length 
+                : exercise.instructions.length) - 1, 
+              prev + 1
+            ))}
             disabled={currentStep === (hasDetailedExecution && exercise.executionSteps 
               ? exercise.executionSteps.length 
               : exercise.instructions.length) - 1}
@@ -642,12 +432,6 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
             <ChevronRightIcon className="h-6 w-6 text-purple-700" />
           </button>
         </div>
-        
-        {/* Adicionar o diálogo de conclusão */}
-        {showCompletionDialog && <CompletionDialog />}
-        
-        {/* Confetti effect */}
-        <ConfettiEffect active={showConfetti} />
       </div>
     );
   }
@@ -664,70 +448,50 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
       />
 
       <div className="px-4 max-w-md mx-auto">
-        {/* Exercise Photo or Video */}
-        {exercise.isVideoExercise && exercise.videoUrl ? (
-          <DirectYouTubeEmbed videoUrl={exercise.videoUrl} />
-        ) : (
-          <div className="aspect-video overflow-hidden rounded-2xl mb-4 bg-gray-100 flex items-center justify-center relative">
-            {exercise.photoUrl ? (
-              <img 
-                src={exercise.photoUrl} 
-                alt={`Demonstração de ${exercise.name}`} 
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <img 
-                src={`https://source.unsplash.com/random/800x600/?yoga,${exercise.category.toLowerCase()},exercise`} 
-                alt={`Demonstração de ${exercise.name}`}
-                className="w-full h-full object-cover"
-              />
-            )}
+        {/* Exercise Photo */}
+        <div className="aspect-video overflow-hidden rounded-2xl mb-4 bg-gray-100 flex items-center justify-center relative">
+          {exercise.photoUrl ? (
+            <img 
+              src={exercise.photoUrl} 
+              alt={`Demonstração de ${exercise.name}`} 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <img 
+              src={`https://source.unsplash.com/random/800x600/?yoga,${exercise.category.toLowerCase()},exercise`} 
+              alt={`Demonstração de ${exercise.name}`}
+              className="w-full h-full object-cover"
+            />
+          )}
 
-            {/* Badges overlay */}
-            <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2">
-              <span className="px-2 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-medium text-gray-700 shadow-sm flex items-center">
-                <ClockIcon className="h-3 w-3 mr-1" />
-                {exercise.duration} minutos
+          {/* Badges overlay */}
+          <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2">
+            <span className="px-2 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-medium text-gray-700 shadow-sm flex items-center">
+              <ClockIcon className="h-3 w-3 mr-1" />
+              {exercise.duration} minutos
+            </span>
+            <span className="px-2 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-medium text-gray-700 shadow-sm flex items-center">
+              {exercise.difficulty === 'Fácil' ? 
+                <span className="h-2 w-2 bg-green-500 rounded-full mr-1"></span> : 
+                <span className="h-2 w-2 bg-orange-500 rounded-full mr-1"></span>
+              } 
+              {exercise.difficulty}
+            </span>
+            <span className="px-2 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-medium text-gray-700 shadow-sm flex items-center">
+              <span className="mr-1 text-purple-500">
+                {getCategoryIconComponent(categoryIconType)}
               </span>
-              <span className="px-2 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-medium text-gray-700 shadow-sm flex items-center">
-                {exercise.difficulty === 'Fácil' ? 
-                  <span className="h-2 w-2 bg-green-500 rounded-full mr-1"></span> : 
-                  <span className="h-2 w-2 bg-orange-500 rounded-full mr-1"></span>
-                } 
-                {exercise.difficulty}
-              </span>
-              <span className="px-2 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-medium text-gray-700 shadow-sm flex items-center">
-                <span className="mr-1 text-purple-500">
-                  {getCategoryIconComponent(categoryIconType)}
-                </span>
-                {exercise.category}
-              </span>
-            </div>
+              {exercise.category}
+            </span>
           </div>
-        )}
-
-        {/* Informação do vídeo, se aplicável */}
-        {exercise.isVideoExercise && exercise.videoAuthor && (
-          <div className="mb-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
-            <div className="flex items-start">
-              <div className="flex-1">
-                <h3 className="font-medium text-gray-900">Vídeo por: {exercise.videoAuthor}</h3>
-                {exercise.videoDescription && (
-                  <p className="text-sm text-gray-600 mt-1">{exercise.videoDescription}</p>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        </div>
           
-        {/* Timer Card - Removendo shadow */}
-        <Card 
-          variant="default" 
-          size="md" 
-          className="mb-4 shadow-none" 
-          style={{ boxShadow: 'none !important' }}
-        >
-          <CardContent className="pt-6">
+        {/* Timer Card */}
+        <Card variant="default" size="md" className="mb-4">
+          <CardHeader>
+            <CardTitle>Seu momento de autocuidado</CardTitle>
+          </CardHeader>
+          <CardContent>
             <ExerciseTimer 
               initialDuration={calculateDuration()}
               onComplete={handleTimerComplete}
@@ -985,9 +749,6 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
         </div>
       </div>
 
-      {/* Adicionar o diálogo de conclusão */}
-      {showCompletionDialog && <CompletionDialog />}
-      
       {/* Confetti Effect */}
       <ConfettiEffect active={showConfetti} />
     </div>

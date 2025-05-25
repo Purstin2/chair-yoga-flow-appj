@@ -177,16 +177,6 @@ const RecipeDetail: React.FC<RecipeDetailProps> = ({
             </CardContent>
           </Card>
         )}
-
-        {/* Print Button */}
-        <div className="mb-8">
-          <button
-            className="w-full py-3 bg-purple-600 text-white rounded-xl font-medium flex items-center justify-center gap-2 transition-colors"
-          >
-            <span className="text-lg">🖨️</span>
-            SALVAR RECEITA
-          </button>
-        </div>
       </div>
     </div>
   );
