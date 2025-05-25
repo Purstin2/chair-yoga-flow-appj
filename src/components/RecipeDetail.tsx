@@ -1,7 +1,7 @@
 import React from 'react';
 import { Recipe } from '@/types';
 import { ArrowLeftIcon, ClockIcon, UserIcon, BeakerIcon, ExclamationTriangleIcon, AdjustmentsHorizontalIcon, LightBulbIcon } from '@heroicons/react/24/outline';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Header from './Header';
 
 interface RecipeDetailProps {
@@ -196,4 +196,4 @@ function getCategoryEmoji(category: string): string {
   return emojiMap[category] || '🍽️';
 }
 
-export default RecipeDetail; 
+export default RecipeDetail;
