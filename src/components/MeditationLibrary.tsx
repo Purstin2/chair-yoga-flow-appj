@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeftIcon, PauseIcon, PlayIcon } from '@heroicons/react/24/solid';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Header from './Header';
 import { formatTime } from '@/lib/utils';
 

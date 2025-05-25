@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Recipe } from '@/types';
 import { recipes } from '@/data/recipes';
 import { recipeCategories } from '@/data/recipeCategories';
-import { Card, CardContent } from './ui/Card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Search, Clock, Filter } from 'lucide-react';
 import Header from './Header';
 import RecipeDetail from './RecipeDetail';
@@ -271,7 +271,6 @@ const RecipeLibrary: React.FC<RecipeLibraryProps> = ({
 };
 
 // Helper function to get emoji based on category
-// Busca o ícone correspondente à categoria no arquivo recipeCategories.ts
 function getCategoryEmoji(category: string): string {
   const categoryObj = recipeCategories.find(cat => cat.name === category);
   return categoryObj?.icon || '🍽️';

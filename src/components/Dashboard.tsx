@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ClockIcon, 
   SparklesIcon, 
@@ -8,7 +8,7 @@ import {
   CalendarDaysIcon
 } from '@heroicons/react/24/outline';
 import { User, UserProgress } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Header from './Header';
 
 interface DashboardProps {
