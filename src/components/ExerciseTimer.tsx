@@ -161,7 +161,7 @@ const ExerciseTimer: React.FC<ExerciseTimerProps> = ({
             {currentInstruction}
           </p>
         )}
-        
+            
         {/* Step counter text */}
         <p className="text-sm text-gray-600 mb-4">
           Passo {currentStep + 1}/{totalSteps} - {formatTime(timeLeft)}
@@ -185,7 +185,7 @@ const ExerciseTimer: React.FC<ExerciseTimerProps> = ({
           <SpeakerWaveIcon className="h-5 w-5 mr-2" />
           Guia com Áudio
         </button>
-    
+        
         <button
           onClick={() => window.dispatchEvent(new CustomEvent('startStepByStep'))}
           className="py-3 bg-white border border-purple-300 text-purple-700 rounded-lg font-medium flex items-center justify-center"

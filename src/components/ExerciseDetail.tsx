@@ -44,50 +44,52 @@ interface ExerciseDetailProps {
   onProfileClick: () => void;
 }
 
-// Componente para incorporar vídeos do YouTube usando iframe diretamente
-const DirectYouTubeEmbed = ({ videoUrl }: { videoUrl: string }) => {
-  // Para extrair apenas o ID do vídeo da URL
-  const getVideoId = (url: string): string => {
-    if (url.includes('youtube.com/embed/')) {
-      // Já é um URL de incorporação, extrair o ID
-      const parts = url.split('youtube.com/embed/');
-      if (parts.length > 1) {
-        // Remover qualquer parâmetro de consulta
-        return parts[1].split('?')[0];
-      }
+// Componente para incorporar vídeos
+const VideoEmbed = ({ videoUrl }: { videoUrl: string }) => {
+  // Verificar se é um vídeo do Vimeo ou YouTube e ajustar parâmetros
+  const isVimeo = videoUrl.includes('vimeo.com');
+  const isYouTube = videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be');
+  
+  let embedUrl = videoUrl;
+  
+  if (isYouTube) {
+    // Garantir que a URL já não tenha parâmetros
+    if (embedUrl.includes('?')) {
+      // Se já tiver parâmetros, apenas adicionar os que faltam
+      if (!embedUrl.includes('rel=0')) embedUrl += '&rel=0';
+      if (!embedUrl.includes('modestbranding=1')) embedUrl += '&modestbranding=1';
+    } else {
+      // Adicionar parâmetros para melhorar compatibilidade com YouTube
+      embedUrl = `${videoUrl}?rel=0&modestbranding=1`;
     }
-    
-    // Para URLs normais do YouTube
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : '';
-  };
-  
-  const videoId = getVideoId(videoUrl);
-  
-  if (!videoId) {
-    return (
-      <div className="aspect-video w-full bg-gray-200 rounded-2xl mb-4 flex items-center justify-center">
-        <p className="text-gray-500">Vídeo não disponível</p>
-      </div>
-    );
+  } else if (isVimeo) {
+    // Ajustar parâmetros para Vimeo
+    if (videoUrl.includes('player.vimeo.com')) {
+      embedUrl = `${videoUrl}?autoplay=0&title=0&byline=0&portrait=0`;
+    } else {
+      // Converter URL normal do Vimeo para URL de incorporação
+      const vimeoId = videoUrl.split('/').pop();
+      embedUrl = `https://player.vimeo.com/video/${vimeoId}?autoplay=0&title=0&byline=0&portrait=0`;
+    }
   }
   
-  // Usar o formato embed direto do YouTube
   return (
     <div className="aspect-video w-full rounded-2xl mb-4 overflow-hidden">
       <iframe 
         width="100%" 
         height="100%" 
-        src={`https://www.youtube.com/embed/${videoId}`}
-        title="YouTube video player" 
+        src={embedUrl}
+        title="Video player" 
         frameBorder="0" 
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
         allowFullScreen
       ></iframe>
     </div>
   );
 };
+
+// Manter compatibilidade com código existente
+const YouTubeEmbed = VideoEmbed;
 
 const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
   exercise,
@@ -338,7 +340,7 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
       
       // Buscar as vozes disponíveis
       const voices = window.speechSynthesis.getVoices();
-      
+
       // Tentar encontrar a melhor voz disponível
       // Prioridade: 1. Voz premium/aprimorada em português brasileiro
       //             2. Qualquer voz em português brasileiro
@@ -570,17 +572,17 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
               : exercise.instructions[currentStep]}
           </p>
           
-          <div className="mb-8 w-full max-w-sm">
-            <p className="text-center text-gray-600 mb-2">
+            <div className="mb-8 w-full max-w-sm">
+              <p className="text-center text-gray-600 mb-2">
               Duração: {stepTimeLeft} segundos
-            </p>
-            <div className="w-full bg-gray-200 rounded-full h-4">
-              <div 
-                className="h-4 rounded-full bg-purple-600 transition-all duration-500 ease-in-out"
+              </p>
+              <div className="w-full bg-gray-200 rounded-full h-4">
+                <div 
+                  className="h-4 rounded-full bg-purple-600 transition-all duration-500 ease-in-out"
                 style={{ width: `${stepProgress}%` }}
-              />
+                />
+              </div>
             </div>
-          </div>
         </div>
             
         <div className="bg-gray-100 p-4 flex justify-around">
@@ -619,7 +621,7 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
               <PlayIcon className="h-6 w-6 text-purple-700" />
             )}
           </button>
-          
+              
           <button
             onClick={() => {
               if (stepTimerRef.current) {
@@ -666,46 +668,46 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
       <div className="px-4 max-w-md mx-auto">
         {/* Exercise Photo or Video */}
         {exercise.isVideoExercise && exercise.videoUrl ? (
-          <DirectYouTubeEmbed videoUrl={exercise.videoUrl} />
+          <YouTubeEmbed videoUrl={exercise.videoUrl} />
         ) : (
-          <div className="aspect-video overflow-hidden rounded-2xl mb-4 bg-gray-100 flex items-center justify-center relative">
-            {exercise.photoUrl ? (
-              <img 
-                src={exercise.photoUrl} 
-                alt={`Demonstração de ${exercise.name}`} 
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <img 
-                src={`https://source.unsplash.com/random/800x600/?yoga,${exercise.category.toLowerCase()},exercise`} 
-                alt={`Demonstração de ${exercise.name}`}
-                className="w-full h-full object-cover"
-              />
-            )}
+        <div className="aspect-video overflow-hidden rounded-2xl mb-4 bg-gray-100 flex items-center justify-center relative">
+          {exercise.photoUrl ? (
+            <img 
+              src={exercise.photoUrl} 
+              alt={`Demonstração de ${exercise.name}`} 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <img 
+              src={`https://source.unsplash.com/random/800x600/?yoga,${exercise.category.toLowerCase()},exercise`} 
+              alt={`Demonstração de ${exercise.name}`}
+              className="w-full h-full object-cover"
+            />
+          )}
 
-            {/* Badges overlay */}
-            <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2">
-              <span className="px-2 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-medium text-gray-700 shadow-sm flex items-center">
-                <ClockIcon className="h-3 w-3 mr-1" />
-                {exercise.duration} minutos
+          {/* Badges overlay */}
+          <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2">
+            <span className="px-2 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-medium text-gray-700 shadow-sm flex items-center">
+              <ClockIcon className="h-3 w-3 mr-1" />
+              {exercise.duration} minutos
+            </span>
+            <span className="px-2 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-medium text-gray-700 shadow-sm flex items-center">
+              {exercise.difficulty === 'Fácil' ? 
+                <span className="h-2 w-2 bg-green-500 rounded-full mr-1"></span> : 
+                <span className="h-2 w-2 bg-orange-500 rounded-full mr-1"></span>
+              } 
+              {exercise.difficulty}
+            </span>
+            <span className="px-2 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-medium text-gray-700 shadow-sm flex items-center">
+              <span className="mr-1 text-purple-500">
+                {getCategoryIconComponent(categoryIconType)}
               </span>
-              <span className="px-2 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-medium text-gray-700 shadow-sm flex items-center">
-                {exercise.difficulty === 'Fácil' ? 
-                  <span className="h-2 w-2 bg-green-500 rounded-full mr-1"></span> : 
-                  <span className="h-2 w-2 bg-orange-500 rounded-full mr-1"></span>
-                } 
-                {exercise.difficulty}
-              </span>
-              <span className="px-2 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-medium text-gray-700 shadow-sm flex items-center">
-                <span className="mr-1 text-purple-500">
-                  {getCategoryIconComponent(categoryIconType)}
-                </span>
-                {exercise.category}
-              </span>
-            </div>
+              {exercise.category}
+            </span>
           </div>
+        </div>
         )}
-
+          
         {/* Informação do vídeo, se aplicável */}
         {exercise.isVideoExercise && exercise.videoAuthor && (
           <div className="mb-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
@@ -987,7 +989,7 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
 
       {/* Adicionar o diálogo de conclusão */}
       {showCompletionDialog && <CompletionDialog />}
-      
+
       {/* Confetti Effect */}
       <ConfettiEffect active={showConfetti} />
     </div>

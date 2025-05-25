@@ -21,6 +21,37 @@ interface ExerciseLibraryProps {
 
 type ExerciseTab = 'standard' | 'videos';
 
+// Função para extrair ID do YouTube e gerar URL da miniatura
+const getYouTubeThumbnail = (url: string | undefined): string => {
+  if (!url) return '';
+  
+  // Extrair o ID do vídeo da URL do YouTube
+  let videoId = '';
+  
+  try {
+    // Lidar com diferentes formatos de URL
+    if (url.includes('youtube.com/watch')) {
+      const urlParams = new URLSearchParams(url.split('?')[1]);
+      videoId = urlParams.get('v') || '';
+    } else if (url.includes('youtube.com/embed/')) {
+      videoId = url.split('youtube.com/embed/')[1].split('?')[0];
+    } else if (url.includes('youtu.be/')) {
+      videoId = url.split('youtu.be/')[1].split('?')[0];
+    }
+    
+    // Se não conseguirmos obter o ID, usar uma imagem genérica
+    if (!videoId) {
+      return 'https://images.unsplash.com/photo-1522035508726-d50692a8f2ba?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTB8fHlvZ2F8ZW58MHx8MHx8fDA%3D';
+    }
+    
+    // Retornar URL da miniatura em alta qualidade
+    return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+  } catch (error) {
+    console.error('Erro ao extrair thumbnail do YouTube:', error);
+    return 'https://images.unsplash.com/photo-1522035508726-d50692a8f2ba?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTB8fHlvZ2F8ZW58MHx8MHx8fDA%3D';
+  }
+};
+
 const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ 
   onBack, 
   onSelectExercise,
@@ -173,6 +204,12 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({
                     {exercise.photoUrl ? (
                       <img 
                         src={exercise.photoUrl} 
+                        alt={exercise.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : exercise.isVideoExercise && exercise.videoUrl ? (
+                      <img 
+                        src={getYouTubeThumbnail(exercise.videoUrl)} 
                         alt={exercise.name}
                         className="w-full h-full object-cover"
                       />

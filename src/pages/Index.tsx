@@ -5,7 +5,6 @@ import Dashboard from "@/components/Dashboard";
 import ProgramCalendar from "@/components/ProgramCalendar";
 import ExerciseLibrary from "@/components/ExerciseLibrary";
 import ExerciseDetail from "@/components/ExerciseDetail";
-import RecipeLibrary from "@/components/RecipeLibrary";
 import MeditationLibrary from "@/components/MeditationLibrary";
 import ProfileScreen from "@/components/ProfileScreen";
 import MedicalQuiz from "@/components/MedicalQuiz";
@@ -14,8 +13,9 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import { exercises } from "@/data/exercises";
 import allExercises from "@/data/allScientificExercises";
 import videoExercises from "@/data/videoExercises";
+import RecipeLibrary from "@/components/RecipeLibrary";
 
-type View = 'dashboard' | 'program' | 'exercises' | 'exercise-detail' | 'recipes' | 'meditation' | 'profile' | 'quiz' | 'disclaimer' | 'nutrition';
+type View = 'dashboard' | 'program' | 'exercises' | 'exercise-detail' | 'meditation' | 'profile' | 'quiz' | 'disclaimer' | 'nutrition';
 
 // Default user for all
 const defaultUser: User = {
@@ -56,6 +56,8 @@ const Index = () => {
   const [userProgress, setUserProgress] = useState<UserProgress>(defaultProgress);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
+  const [disclaimerRedirect, setDisclaimerRedirect] = useState<View | null>(null);
 
   // Load data safely from localStorage
   const safelyLoadData = useCallback(<T,>(key: string, defaultValue: T): T => {
@@ -254,9 +256,12 @@ const Index = () => {
   };
 
   const handleTabChange = (tab: View) => {
-    const allowedTabs = ['dashboard', 'program', 'exercises', 'meditation', 'recipes', 'nutrition'];
+    if (tab === 'exercise-detail') return; // Ignore direct navigation to exercise detail
     
-    if (allowedTabs.includes(tab)) {
+    if (showDisclaimer && tab !== 'disclaimer' && tab !== 'profile') {
+      setDisclaimerRedirect(tab);
+      setCurrentView('disclaimer');
+    } else {
       setCurrentView(tab);
     }
   };
@@ -313,7 +318,6 @@ const Index = () => {
                 onStartExercise={() => setCurrentView('exercises')}
                 onViewProgram={() => setCurrentView('program')}
                 onProfileClick={handleProfileClick}
-                onResetProgress={handleResetProgress}
               />
             )}
 
@@ -323,8 +327,10 @@ const Index = () => {
                 onBack={() => setCurrentView('dashboard')}
                 user={currentUser}
                 onProfileClick={handleProfileClick}
-                onSelectExercise={handleExerciseSelect}
-                onComplete={handleExerciseComplete}
+                onSelectDay={(day) => {
+                  console.log(`Dia ${day} selecionado`);
+                  // Aqui você pode adicionar lógica para selecionar um dia específico
+                }}
               />
             )}
 
@@ -349,14 +355,6 @@ const Index = () => {
               />
             )}
 
-            {currentView === 'recipes' && (
-              <RecipeLibrary 
-                onBack={() => setCurrentView('dashboard')} 
-                user={currentUser}
-                onProfileClick={handleProfileClick}
-              />
-            )}
-
             {currentView === 'meditation' && (
               <MeditationLibrary 
                 onBack={() => setCurrentView('dashboard')} 
@@ -367,7 +365,7 @@ const Index = () => {
 
             {currentView === 'nutrition' && (
               <RecipeLibrary
-                onBack={() => setCurrentView('dashboard')}
+                onBack={() => setCurrentView('dashboard')} 
                 user={currentUser}
                 onProfileClick={handleProfileClick}
               />

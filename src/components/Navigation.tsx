@@ -4,7 +4,6 @@ import {
   CalendarIcon,
   BookOpenIcon,
   MusicalNoteIcon,
-  Squares2X2Icon,
   BeakerIcon,
   HeartIcon
 } from '@heroicons/react/24/outline';
@@ -13,14 +12,13 @@ import {
   CalendarIcon as CalendarIconSolid,
   BookOpenIcon as BookOpenIconSolid,
   BeakerIcon as BeakerIconSolid,
-  HeartIcon as HeartIconSolid,
-  Squares2X2Icon as Squares2X2IconSolid
+  HeartIcon as HeartIconSolid
 } from '@heroicons/react/24/solid';
 
-type Tab = 'dashboard' | 'program' | 'exercises' | 'exercise-detail' | 'recipes' | 'meditation' | 'profile' | 'nutrition';
+type Tab = 'dashboard' | 'program' | 'exercises' | 'exercise-detail' | 'meditation' | 'profile' | 'nutrition';
 
 interface NavigationProps {
-  currentView: string;
+  currentView: Tab;
   onTabChange: (tab: Tab) => void;
 }
 
@@ -56,18 +54,12 @@ const Navigation: React.FC<NavigationProps> = ({ currentView, onTabChange }) => 
       label: 'Meditação',
       icon: <HeartIcon className="h-6 w-6 text-white" />,
       activeIcon: <HeartIconSolid className="h-6 w-6 text-white" />
-    },
-    {
-      id: 'recipes' as Tab,
-      label: 'Receitas',
-      icon: <Squares2X2Icon className="h-6 w-6 text-white" />,
-      activeIcon: <Squares2X2IconSolid className="h-6 w-6 text-white" />
-    },
+    }
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-purple-600 border-t border-purple-700 px-4 py-2 z-50 shadow-md">
-      <div className="max-w-md mx-auto flex justify-between">
+    <div className="fixed bottom-0 left-0 right-0 bg-purple-600 border-t border-purple-700 px-2 py-1 z-50 shadow-lg" style={{ height: '70px' }}>
+      <div className="h-full flex justify-around items-center">
         {tabs.map((tab) => {
           const isActive = currentView === tab.id;
           
@@ -75,18 +67,27 @@ const Navigation: React.FC<NavigationProps> = ({ currentView, onTabChange }) => 
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${
+              className={`flex flex-col items-center justify-center h-full py-1 px-2 ${
                 isActive 
-                  ? 'text-white bg-purple-800' 
-                  : 'text-white hover:bg-purple-700'
+                  ? 'text-white' 
+                  : 'text-white/80 hover:text-white'
               }`}
+              style={{ minWidth: '64px' }}
             >
-              <div className={`relative ${isActive ? 'mb-0.5' : ''}`}>
+              {(tab.id === 'nutrition' || tab.id === 'meditation') && (
+                <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-yellow-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-sm whitespace-nowrap">
+                  DESBLOQUEADO
+                </div>
+              )}
+              <div className="mb-1">
                 {isActive ? tab.activeIcon : tab.icon}
               </div>
-              <span className={`text-xs mt-1 text-white ${isActive ? 'font-medium' : ''}`}>
+              <span className={`text-xs text-center text-white ${isActive ? 'font-medium' : ''}`}>
                 {tab.label}
               </span>
+              {isActive && (
+                <div className="absolute bottom-0 w-10 h-1 bg-white rounded-t-full"></div>
+              )}
             </button>
           );
         })}

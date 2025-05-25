@@ -42,9 +42,9 @@ const videoExercises: Exercise[] = [
       "Respeite seus limites de amplitude"
     ],
     isVideoExercise: true,
-    videoUrl: "https://www.youtube.com/embed/X8MRER4T86w",
+    videoUrl: "https://www.youtube.com/embed/Y6U728AZnV0",
     videoSource: "YouTube",
-    videoAuthor: "Especialista em Yoga",
+    videoAuthor: "Especialista em Fisioterapia",
     videoDescription: "Sequência de yoga para aliviar tensão e dores na região cervical, pescoço e ombros."
   },
   {
@@ -88,9 +88,9 @@ const videoExercises: Exercise[] = [
       "Evite se tiver hérnia de disco aguda"
     ],
     isVideoExercise: true,
-    videoUrl: "https://www.youtube.com/embed/DYhlXlp24qs",
+    videoUrl: "https://www.youtube.com/embed/ZOGJExxFoiM",
     videoSource: "YouTube",
-    videoAuthor: "Especialista em Yoga",
+    videoAuthor: "Especialista em Fisioterapia",
     videoDescription: "Sequência para aliviar dores na região lombar e no nervo ciático com posturas de yoga terapêutica."
   },
   {
@@ -134,9 +134,9 @@ const videoExercises: Exercise[] = [
       "Consulte um médico para casos graves"
     ],
     isVideoExercise: true,
-    videoUrl: "https://www.youtube.com/embed/S4iD6dElrDA",
+    videoUrl: "https://www.youtube.com/embed/b6yLwvNSDck",
     videoSource: "YouTube",
-    videoAuthor: "Especialista em Fisioterapia",
+    videoAuthor: "Especialista em Yoga",
     videoDescription: "Exercícios específicos para aliviar os sintomas do túnel do carpo e melhorar a mobilidade dos punhos."
   },
   {
@@ -180,7 +180,7 @@ const videoExercises: Exercise[] = [
       "Consulte um médico em casos de dor intensa"
     ],
     isVideoExercise: true,
-    videoUrl: "https://www.youtube.com/embed/FuEUwCAPPys",
+    videoUrl: "https://www.youtube.com/embed/gDQNqZMv1V0",
     videoSource: "YouTube",
     videoAuthor: "Especialista em Yoga",
     videoDescription: "Sequência de yoga para aliviar dores na região lombar e no nervo ciático através de posturas terapêuticas."
@@ -226,7 +226,7 @@ const videoExercises: Exercise[] = [
       "Não faça em caso de lesão recente"
     ],
     isVideoExercise: true,
-    videoUrl: "https://www.youtube.com/embed/kxfQD9Q56xE",
+    videoUrl: "https://www.youtube.com/embed/8p-52U_Xw7w",
     videoSource: "YouTube",
     videoAuthor: "Especialista em Yoga",
     videoDescription: "Sequência rápida para aliviar tensão e dor nos ombros e pescoço, ideal para quem trabalha no computador."
@@ -272,7 +272,7 @@ const videoExercises: Exercise[] = [
       "Consulte um médico em caso de lesão recente"
     ],
     isVideoExercise: true,
-    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+    videoUrl: "https://www.youtube.com/embed/Y6U728AZnV0",
     videoSource: "YouTube",
     videoAuthor: "Especialista em Fisioterapia",
     videoDescription: "Exercícios terapêuticos para aliviar dores nos joelhos e fortalecer as articulações de forma segura."
@@ -318,7 +318,7 @@ const videoExercises: Exercise[] = [
       "Interrompa se sentir dor aguda"
     ],
     isVideoExercise: true,
-    videoUrl: "https://www.youtube.com/embed/9bZkp7q19f0",
+    videoUrl: "https://www.youtube.com/embed/0JfYxMRsUCQ",
     videoSource: "YouTube",
     videoAuthor: "Especialista em Fisioterapia",
     videoDescription: "Sequência de exercícios para melhorar a mobilidade dos tornozelos e aliviar dores e inchaços."
@@ -364,7 +364,7 @@ const videoExercises: Exercise[] = [
       "Não é recomendado após cirurgias recentes no quadril"
     ],
     isVideoExercise: true,
-    videoUrl: "https://www.youtube.com/embed/jNQXAC9IVRw",
+    videoUrl: "https://www.youtube.com/embed/SJBc6Q_2H5A",
     videoSource: "YouTube",
     videoAuthor: "Especialista em Yoga",
     videoDescription: "Sequência terapêutica para melhorar a mobilidade do quadril e aliviar dores na região pélvica e lombar."
@@ -410,7 +410,7 @@ const videoExercises: Exercise[] = [
       "Não force dedos com deformidades"
     ],
     isVideoExercise: true,
-    videoUrl: "https://www.youtube.com/embed/jofNR_WkoCE",
+    videoUrl: "https://www.youtube.com/embed/I4CAFj_i1Ro",
     videoSource: "YouTube",
     videoAuthor: "Especialista em Terapia Ocupacional",
     videoDescription: "Exercícios suaves para as mãos e dedos, focados em aliviar dores e melhorar a mobilidade."
@@ -456,7 +456,7 @@ const videoExercises: Exercise[] = [
       "Tenha cuidado extra em caso de osteoporose"
     ],
     isVideoExercise: true,
-    videoUrl: "https://www.youtube.com/embed/fJ9rUzIMcZQ",
+    videoUrl: "https://www.youtube.com/embed/Wq6FI6nNxQI",
     videoSource: "YouTube",
     videoAuthor: "Especialista em Fisioterapia",
     videoDescription: "Exercícios focados na mobilidade da coluna torácica e alívio de tensões na região das escápulas."
@@ -548,10 +548,10 @@ const videoExercises: Exercise[] = [
       "Tenha cuidado extra em caso de osteoporose"
     ],
     isVideoExercise: true,
-    videoUrl: "https://www.youtube.com/embed/970sRjQ5rh8",
+    videoUrl: "https://www.youtube.com/embed/Wq6FI6nNxQI",
     videoSource: "YouTube",
-    videoAuthor: "Especialista em Yoga",
-    videoDescription: "Exercícios focados na mobilidade da coluna sacral e alívio de tensões na região lombar."
+    videoAuthor: "Especialista em Fisioterapia",
+    videoDescription: "Exercícios focados na mobilidade da coluna torácica e alívio de tensões na região das escápulas."
   },
   {
     id: 1017,
@@ -594,7 +594,7 @@ const videoExercises: Exercise[] = [
       "Consulte um fisioterapeuta se a dor persistir"
     ],
     isVideoExercise: true,
-    videoUrl: "https://www.youtube.com/embed/fJ9rUzIMcZQ",
+    videoUrl: "https://www.youtube.com/embed/UVmRrZo0Gz4",
     videoSource: "YouTube",
     videoAuthor: "Especialista em Fisioterapia",
     videoDescription: "Exercícios para aliviar dores e fortalecer os músculos do ombro."
@@ -640,7 +640,7 @@ const videoExercises: Exercise[] = [
       "Consulte um fisioterapeuta se a dor persistir"
     ],
     isVideoExercise: true,
-    videoUrl: "https://www.youtube.com/embed/JGwWNGJdvx8",
+    videoUrl: "https://www.youtube.com/embed/UVmRrZo0Gz4",
     videoSource: "YouTube",
     videoAuthor: "Especialista em Fisioterapia",
     videoDescription: "Exercícios para aliviar dores e fortalecer os músculos do quadril."
