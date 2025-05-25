@@ -10,7 +10,7 @@ import {
   FiYoutube, FiTarget, FiList, FiAlertTriangle, FiBarChart2, FiCheckCircle
 } from 'react-icons/fi';
 import { getCategoryIcon, IconType, getCategoryColor } from '@/data/exerciseCategories';
-import videoExercises from '@/data/videoExercises';
+import { allExercises, videoExercises, additionalExercises } from '@/data/index';
 import { extractYouTubeId, getYouTubeThumbnail } from '@/lib/utils';
 import { isExerciseCompleted, isFavorite, addToFavorites, removeFromFavorites, getFavorites } from '@/lib/userApi';
 import useSounds from '@/hooks/useSounds';
@@ -23,7 +23,7 @@ interface ExerciseLibraryProps {
   exercises?: Exercise[];
 }
 
-type ExerciseTab = 'standard' | 'videos' | 'favorites';
+type ExerciseTab = 'standard' | 'videos' | 'favorites' | 'all';
 
 const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ 
   onBack, 
@@ -34,7 +34,7 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<ExerciseTab>('standard');
+  const [activeTab, setActiveTab] = useState<ExerciseTab>('all'); // Começar com todos os exercícios
   const [favoriteExercises, setFavoriteExercises] = useState<string[]>([]);
   const [completedExercises, setCompletedExercises] = useState<string[]>([]);
   const { playTap, playSuccess } = useSounds();
@@ -49,8 +49,7 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({
       const favorites = getFavorites();
       setFavoriteExercises(favorites);
       
-      // Verificar exercícios concluídos
-      const allExercises = [...exercises, ...videoExercises];
+      // Verificar exercícios concluídos usando a coleção completa
       const completed = allExercises
         .filter(ex => isExerciseCompleted(ex.id))
         .map(ex => ex.id.toString());
@@ -61,7 +60,7 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [exercises]);
+  }, []);
   
   useEffect(() => {
     refreshExerciseStatuses();
@@ -69,19 +68,19 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({
 
   // Determinar os exercícios a serem exibidos com base na aba selecionada
   const getDisplayExercises = useCallback(() => {
-    const allExercises = [...exercises, ...videoExercises];
-    
     switch (activeTab) {
       case 'standard':
-        return exercises;
+        return additionalExercises;
       case 'videos':
         return videoExercises;
       case 'favorites':
         return allExercises.filter(ex => favoriteExercises.includes(ex.id.toString()));
+      case 'all':
+        return allExercises;
       default:
-        return exercises;
+        return allExercises;
     }
-  }, [activeTab, exercises, favoriteExercises]);
+  }, [activeTab, favoriteExercises]);
 
   const displayExercises = getDisplayExercises();
 
@@ -171,7 +170,22 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({
 
       <div className="px-4 max-w-md mx-auto">
         {/* Abas de Exercícios */}
-        <div className="flex mb-4 bg-gray-100 rounded-lg p-1">
+        <div className="flex mb-4 bg-gray-100 rounded-lg p-1 flex-wrap">
+          <button
+            onClick={() => {
+              setActiveTab('all');
+              setSelectedCategory(null);
+              playTap();
+            }}
+            className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center ${
+              activeTab === 'all'
+                ? 'bg-white text-purple-700 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <FiActivity className="h-4 w-4 mr-1.5" />
+            Todos
+          </button>
           <button
             onClick={() => {
               setActiveTab('standard');
@@ -184,8 +198,8 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            <FiActivity className="h-4 w-4 mr-1.5" />
-            Exercícios
+            <FiTarget className="h-4 w-4 mr-1.5" />
+            Cadeira
           </button>
           <button
             onClick={() => {
@@ -337,7 +351,7 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({
                 {activeTab === 'favorites' && favoriteExercises.length === 0 && (
                   <button 
                     onClick={() => {
-                      setActiveTab('standard');
+                      setActiveTab('all');
                       playTap();
                     }}
                     className="mt-4 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg font-medium text-sm hover:bg-purple-200 transition-colors"

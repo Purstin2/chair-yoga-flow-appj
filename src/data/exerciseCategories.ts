@@ -148,6 +148,21 @@ export const exerciseCategories: Record<string, CategoryInfo> = {
     color: '#F59E0B',
     icon: 'sun',
     description: 'Vitalidade e disposição'
+  },
+  'Dor Crônica': {
+    color: '#DC2626',
+    icon: 'heart',
+    description: 'Manejo da dor persistente'
+  },
+  'Estimulação Cognitiva': {
+    color: '#0EA5E9',
+    icon: 'target',
+    description: 'Saúde cerebral e memória'
+  },
+  'Reabilitação Neurológica': {
+    color: '#8B5CF6',
+    icon: 'activity',
+    description: 'Recuperação neurológica'
   }
 };
 
