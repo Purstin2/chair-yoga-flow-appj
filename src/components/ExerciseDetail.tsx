@@ -51,20 +51,32 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
   user,
   onProfileClick
 }) => {
+  // Estado básico do exercício
   const [currentStep, setCurrentStep] = useState(0);
   const [completed, setCompleted] = useState(isCompleted);
   const [showConfetti, setShowConfetti] = useState(false);
+  
+  // Estados de modo de exercício
   const [showTrainingMode, setShowTrainingMode] = useState(false);
   const [showStepByStepMode, setShowStepByStepMode] = useState(false);
-  const [showAutoMode, setShowAutoMode] = useState(false);
+  const [showAudioGuideMode, setShowAudioGuideMode] = useState(false);
+  
+  // Estados de scrolling e destaque visual
   const [isScrolling, setIsScrolling] = useState(false);
   const [highlightedStep, setHighlightedStep] = useState<number | null>(null);
+  
+  // Estados específicos do modo de áudio
+  const [isTimerActive, setIsTimerActive] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState(0);
+  const [progress, setProgress] = useState(0);
   
   // Diálogo de confirmação ao final do exercício
   const [showCompletionDialog, setShowCompletionDialog] = useState(false);
   
-  // Referência para a lista de passos
+  // Referências
   const stepsRef = useRef<HTMLDivElement>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
   
   // Use o hook de sons personalizado
   const { 
@@ -78,6 +90,14 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
   // Determine if the exercise has step-by-step execution info
   const hasDetailedExecution = exercise.executionSteps && exercise.executionSteps.length > 0;
   
+  // Get total steps
+  const totalSteps = hasDetailedExecution ? 
+    exercise.executionSteps?.length || 0 : 
+    exercise.instructions?.length || 0;
+  
+  // Check if current step is the last step
+  const isLastStep = currentStep === totalSteps - 1;
+
   // Get category color and icon
   const categoryColor = getCategoryColor(exercise.category);
   const categoryIconType = getCategoryIcon(exercise.category);
@@ -119,16 +139,50 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
         return <FiActivity className="h-5 w-5" />;
     }
   };
-  
-  const handleAutoMode = () => toggleAutoMode();
-  const handleTrainingMode = () => toggleTrainingMode();
-  const handleStepByStepMode = () => toggleStepByStepMode();
-  const handleAudioGuide = () => toggleAutoMode(); // Usa o modo automático para guia com áudio
-  const handleStepByStep = () => toggleStepByStepMode(); // Usa o modo passo a passo
 
-  // Setup intersection observer for step highlighting
+  // Simplificando os handlers de modo
+  const handleStartAudioGuide = () => {
+    playTap();
+    
+    // Reset outros modos
+    setShowStepByStepMode(false);
+    setShowTrainingMode(false);
+    
+    // Reset exercício
+    setCurrentStep(0);
+    
+    // Ativar modo de audio
+    setShowAudioGuideMode(true);
+  };
+  
+  const handleStartStepByStep = () => {
+    playTap();
+    setShowStepByStepMode(true);
+    setShowTrainingMode(false);
+    setShowAudioGuideMode(false);
+  };
+
+  const handleTrainingMode = () => {
+    playTap();
+    setShowTrainingMode(prev => !prev);
+    setShowStepByStepMode(false);
+    setShowAudioGuideMode(false);
+  };
+
+  // Limpar confetti após exibição
   useEffect(() => {
-    if (!stepsRef.current || showStepByStepMode) return;
+    if (showConfetti) {
+      const timer = setTimeout(() => {
+        setShowConfetti(false);
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [showConfetti]);
+
+  // Configuração do observador de interseção para destacar passos durante scroll
+  useEffect(() => {
+    if (!stepsRef.current || showStepByStepMode || showAudioGuideMode) return;
     
     const observer = new IntersectionObserver(
       (entries) => {
@@ -163,9 +217,9 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
         observer.unobserve(element);
       });
     };
-  }, [showStepByStepMode, isScrolling]);
+  }, [showStepByStepMode, showAudioGuideMode, isScrolling]);
 
-  // Handle manual scrolling detection
+  // Detecção de scrolling
   useEffect(() => {
     let scrollTimeout: NodeJS.Timeout;
     
@@ -186,9 +240,9 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
     };
   }, []);
 
-  // Scroll to the selected step when manually changing step
+  // Scroll para o passo atual quando mudar manualmente
   useEffect(() => {
-    if (showStepByStepMode || isScrolling || highlightedStep === currentStep) return;
+    if (showStepByStepMode || showAudioGuideMode || isScrolling || highlightedStep === currentStep) return;
     
     const scrollToSelectedStep = () => {
       const element = document.getElementById(`step-${currentStep}`);
@@ -208,23 +262,11 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
     };
     
     scrollToSelectedStep();
-  }, [currentStep, showStepByStepMode, isScrolling, highlightedStep]);
+  }, [currentStep, showStepByStepMode, showAudioGuideMode, isScrolling, highlightedStep]);
 
-  useEffect(() => {
-    // Limpar confetti após 3 segundos
-    if (showConfetti) {
-      const timer = setTimeout(() => {
-        setShowConfetti(false);
-      }, 3000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [showConfetti]);
-
-  const handleTimerComplete = () => {
+  // Funções para o diálogo de conclusão
+  const handleShowCompletionDialog = () => {
     setShowCompletionDialog(true);
-    setShowStepByStepMode(false);
-    setShowAutoMode(false);
   };
 
   const handleConfirmCompletion = () => {
@@ -232,18 +274,16 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
     setShowCompletionDialog(false);
     setShowConfetti(true);
     
-    // Registrar conclusão com dados do exercício para estatísticas
+    // Registrar conclusão para estatísticas
     completeExercise(exercise.id, {
       category: exercise.category,
       duration: exercise.duration
     });
     
     onComplete();
-    
-    // Tocar som de conclusão
     playSuccess({ enableFeedback: true });
     
-    // Fornecer feedback tátil
+    // Feedback tátil
     if ('vibrate' in navigator) {
       navigator.vibrate([100, 50, 100]);
     }
@@ -259,71 +299,164 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
     setShowCompletionDialog(true);
   };
 
-  const toggleTrainingMode = () => {
-    playTap();
-    setShowTrainingMode(prev => !prev);
-    setShowStepByStepMode(false);
-    setShowAutoMode(false);
-  };
-
-  const toggleStepByStepMode = () => {
-    playTap();
-    setShowStepByStepMode(prev => !prev);
-    setShowTrainingMode(false);
-    setShowAutoMode(false);
-  };
-
-  const toggleAutoMode = () => {
-    playTap();
-    setShowAutoMode(prev => !prev);
-    setShowTrainingMode(false);
-    setShowStepByStepMode(false);
-  };
-
-  const speakInstruction = (text: string) => {
-    if (!soundEnabled) return;
+  // Função simplificada para síntese de voz
+  const speakText = (text: string) => {
+    if (!soundEnabled || !text) return;
     
-    if ('speechSynthesis' in window) {
-      // Cancelar qualquer fala anterior
+    // Cancelar qualquer fala anterior
+    if (speechRef.current) {
       window.speechSynthesis.cancel();
-      
+    }
+    
+    try {
+      // Criar e configurar um novo utterance
       const utterance = new SpeechSynthesisUtterance(text);
-      
-      // Definir o idioma para português do Brasil
       utterance.lang = 'pt-BR';
+      utterance.rate = 0.7;  // Falar mais devagar
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
       
-      // Ajustar a velocidade para falar mais devagar
-      utterance.rate = 0.9;
-      
-      // Escolher uma voz feminina se disponível
+      // Obter vozes disponíveis e escolher a mais adequada
       const voices = window.speechSynthesis.getVoices();
-      const portugueseVoices = voices.filter(voice => voice.lang.includes('pt'));
-      
-      if (portugueseVoices.length > 0) {
-        // Preferir voz feminina
-        const femaleVoice = portugueseVoices.find(voice => voice.name.includes('female') || voice.name.includes('Maria'));
-        utterance.voice = femaleVoice || portugueseVoices[0];
+      if (voices && voices.length > 0) {
+        const ptVoices = voices.filter(v => 
+          v.lang.includes('pt') || 
+          v.name.toLowerCase().includes('brasil') ||
+          v.name.toLowerCase().includes('português')
+        );
+        
+        if (ptVoices.length > 0) {
+          utterance.voice = ptVoices[0];
+        }
       }
       
+      // Guardar referência para poder cancelar se necessário
+      speechRef.current = utterance;
+      
+      // Falar o texto
       window.speechSynthesis.speak(utterance);
-    } else {
-      console.log('Text-to-speech não suportado neste navegador.');
+    } catch (error) {
+      console.error('Erro na síntese de voz:', error);
     }
   };
-
-  // Calcular a duração total do exercício
-  const calculateDuration = () => {
-    if (hasDetailedExecution && exercise.executionSteps) {
-      return exercise.executionSteps.reduce((total, step) => total + (step.duration || 0), 0);
+  
+  // IMPLEMENTAÇÃO SIMPLIFICADA DO MODO DE ÁUDIO
+  // -----------------------------------------
+  
+  // Iniciar o exercício
+  const startExercise = useCallback(() => {
+    // Garantir que estamos no primeiro passo
+    setCurrentStep(0);
+    
+    // Iniciar o timer do primeiro passo
+    startStepTimer();
+  }, []);
+  
+  // Iniciar o timer para um passo
+  const startStepTimer = useCallback(() => {
+    // Limpar timer anterior se existir
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
     }
     
-    // Se não tiver passos detalhados, usar a duração geral do exercício
-    return parseInt(exercise.duration) * 60 || 300; // 5 minutos padrão
-  };
+    // Obter duração do passo atual
+    const stepDuration = hasDetailedExecution && exercise.executionSteps 
+      ? exercise.executionSteps[currentStep]?.duration || 15
+      : 15;
+    
+    // Obter instrução do passo atual
+    const instruction = hasDetailedExecution && exercise.executionSteps 
+      ? exercise.executionSteps[currentStep]?.instruction 
+      : exercise.instructions[currentStep];
+    
+    // Falar a instrução
+    setTimeout(() => {
+      speakText(instruction);
+    }, 300);
+    
+    // Configurar o timer
+    let timeLeft = stepDuration;
+    setTimeRemaining(timeLeft);
+    setProgress(0);
+    setIsTimerActive(true);
+    
+    // Iniciar o intervalo para atualizar o timer
+    timerRef.current = setInterval(() => {
+      timeLeft--;
+      setTimeRemaining(timeLeft);
+      
+      // Calcular e atualizar o progresso
+      const stepProgress = ((stepDuration - timeLeft) / stepDuration) * 100;
+      setProgress(stepProgress);
+      
+      // Verificar se o tempo acabou
+      if (timeLeft <= 0) {
+        // Limpar o intervalo
+        clearInterval(timerRef.current as NodeJS.Timeout);
+        timerRef.current = null;
+        
+        // Se não for o último passo, avançar para o próximo
+        if (currentStep < totalSteps - 1) {
+          setCurrentStep(prev => prev + 1);
+        } else {
+          // Se for o último passo, finalizar o exercício
+          setIsTimerActive(false);
+          handleShowCompletionDialog();
+        }
+      }
+    }, 1000);
+  }, [currentStep, exercise.executionSteps, exercise.instructions, hasDetailedExecution, totalSteps]);
+  
+  // Avançar para o próximo passo quando o currentStep mudar
+  useEffect(() => {
+    if (showAudioGuideMode && isTimerActive) {
+      // Pequeno delay antes de iniciar o timer do próximo passo
+      const delay = setTimeout(() => {
+        startStepTimer();
+      }, 500);
+      
+      return () => clearTimeout(delay);
+    }
+  }, [currentStep, showAudioGuideMode, isTimerActive, startStepTimer]);
+  
+  // Iniciar exercício quando entrar no modo de áudio
+  useEffect(() => {
+    if (showAudioGuideMode) {
+      // Pequeno delay antes de iniciar o exercício
+      const delay = setTimeout(() => {
+        startExercise();
+      }, 1000);
+      
+      return () => clearTimeout(delay);
+    } else {
+      // Cleanup quando sair do modo de áudio
+      setIsTimerActive(false);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      if (speechRef.current) {
+        window.speechSynthesis.cancel();
+        speechRef.current = null;
+      }
+    }
+  }, [showAudioGuideMode, startExercise]);
+  
+  // Limpar recursos ao desmontar o componente
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   // Componente principal de tela
-  return (
-    <ErrorBoundary>
+    return (
+    <ErrorBoundary fallback={<div className="p-4 text-red-500">Algo deu errado ao carregar este exercício.</div>}>
       <div className="bg-white flex flex-col min-h-screen">
         <Header 
           title="Detalhes do Exercício" 
@@ -383,8 +516,8 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" />
                 </svg>
                 Demonstração em vídeo
-              </div>
-            </div>
+          </div>
+        </div>
           )}
           
           {/* Imagem do exercício (se disponível e não for vídeo) */}
@@ -398,20 +531,129 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
               />
             </div>
           )}
-          
+
           {/* Modo Passo a Passo (exibido como uma tela flutuante) */}
           {showStepByStepMode && (
             <StepByStepGuide 
               exercise={exercise}
               onExit={() => setShowStepByStepMode(false)}
-              onComplete={handleTimerComplete}
+              onComplete={handleShowCompletionDialog}
             />
+          )}
+          
+          {/* Modo Guia com Áudio (exibido como uma tela flutuante) */}
+          {showAudioGuideMode && (
+            <div className="fixed inset-0 z-50 bg-white flex flex-col">
+              {/* Cabeçalho do modo guia com áudio */}
+              <div className="flex items-center justify-between p-4 border-b">
+                <button 
+                  onClick={() => setShowAudioGuideMode(false)}
+                  className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                  aria-label="Fechar guia com áudio"
+                >
+                  <ArrowLeftIcon className="h-6 w-6" />
+                </button>
+                <h2 className="text-lg font-medium">Guia com Áudio</h2>
+                <div className="w-10"></div>
+              </div>
+              
+              {/* Conteúdo do guia com áudio */}
+              <div className="flex-1 flex flex-col items-center justify-center p-6 overflow-auto">
+                <div className="w-full max-w-md mx-auto space-y-6">
+                  {/* Indicador de passo atual */}
+                  <div className="text-center mb-8">
+                    <p className="text-xl font-bold mb-2">
+                      {hasDetailedExecution && exercise.executionSteps 
+                        ? exercise.executionSteps[currentStep]?.instruction 
+                        : exercise.instructions[currentStep]}
+                    </p>
+                    
+                    <p className="text-sm text-gray-500">
+                      Passo {currentStep + 1} de {totalSteps}
+                    </p>
+                  </div>
+                  
+                  {/* Timer e barra de progresso */}
+                  <div className="w-full space-y-2">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-600">Progresso</span>
+                      <span className="font-medium">{timeRemaining}s</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                      <div 
+                        className="bg-purple-600 h-2.5 rounded-full transition-all duration-100 ease-linear" 
+                        style={{ width: `${progress}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  
+                  {/* Botões de controle */}
+                  <div className="flex flex-col items-center gap-4 mt-8">
+                    <p className="text-center text-gray-600 text-sm">
+                      {!isLastStep
+                        ? `Avançando automaticamente em ${timeRemaining}s...` 
+                        : `Último passo - ${timeRemaining}s restantes...`}
+                    </p>
+                    
+                    {/* Botão para pausar o exercício */}
+                    <button
+                      onClick={() => setShowAudioGuideMode(false)}
+                      className="py-2 px-4 bg-gray-200 text-gray-700 rounded-lg font-medium"
+                    >
+                      Pausar exercício
+                    </button>
+                    
+                    {/* Botão para concluir exercício (apenas no último passo) */}
+                    {isLastStep && (
+                      <button
+                        onClick={handleShowCompletionDialog}
+                        className="mt-4 w-full py-3 bg-green-600 text-white rounded-lg font-medium flex items-center justify-center"
+                      >
+                        <CheckIcon className="h-5 w-5 mr-2" />
+                        Concluir Exercício
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
           
           {/* Descrição do exercício */}
           <div className="mb-6">
             <h2 className="text-xl font-semibold mb-2">Descrição</h2>
             <p className="text-gray-700">{exercise.description}</p>
+          </div>
+          
+          {/* Botões para modos de exercício */}
+          <div className="mb-6">
+            <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+              <h2 className="text-lg font-medium mb-3 text-gray-800 flex items-center">
+                <PlayIcon className="h-5 w-5 mr-2 text-purple-600" />
+                Modos de Exercício
+              </h2>
+              
+              {/* Botões de modos de exercício */}
+              <div className="grid grid-cols-2 gap-3 w-full">
+                <button
+                  onClick={handleStartAudioGuide}
+                  className="py-3 bg-purple-600 text-white rounded-lg font-medium flex items-center justify-center"
+                  aria-label="Iniciar guia com áudio"
+                >
+                  <SpeakerWaveIcon className="h-5 w-5 mr-2" />
+                  Guia com Áudio
+                </button>
+                
+                <button
+                  onClick={handleStartStepByStep}
+                  className="py-3 bg-white border border-purple-300 text-purple-700 rounded-lg font-medium flex items-center justify-center"
+                  aria-label="Ver passo a passo em texto"
+                >
+                  <ChevronRightIcon className="h-5 w-5 mr-2" />
+                  Passo a Passo
+                </button>
+              </div>
+            </div>
           </div>
           
           {/* Benefícios */}
@@ -465,7 +707,7 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-medium">{step.title || `Passo ${index + 1}`}</h3>
+                          <h3 className="font-medium">{step.instruction ? `Passo ${index + 1}` : `Passo ${index + 1}`}</h3>
                           <span className="text-sm text-gray-500 flex items-center gap-1">
                             <ClockIcon className="h-4 w-4" />
                             {step.duration || 15}s
@@ -494,17 +736,17 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
                         currentStep === index ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700'
                       }`}>
                         {index + 1}
-                      </div>
+              </div>
                       <p className="text-gray-700">{instruction}</p>
-                    </div>
+              </div>
                   </div>
                 ))
               )}
-            </div>
-          </div>
-          
+                  </div>
+                </div>
+                
           {/* Dicas e Informações Adicionais */}
-          {exercise.tips && exercise.tips.length > 0 && (
+          {exercise.cautions && exercise.cautions.length > 0 && (
             <div className="mb-6">
               <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
                 <LightBulbIcon className="h-5 w-5 text-purple-600" />
@@ -512,21 +754,21 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
               </h2>
               <div className="bg-yellow-50 rounded-lg p-4">
                 <ul className="space-y-2">
-                  {exercise.tips.map((tip, index) => (
+                  {exercise.cautions.map((tip, index) => (
                     <li key={index} className="flex items-start gap-2">
                       <div className="h-5 w-5 text-yellow-600 flex-shrink-0 flex items-center justify-center font-bold">
                         {index + 1}.
                       </div>
                       <span>{tip}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
             </div>
           )}
           
           {/* Precauções */}
-          {exercise.precautions && exercise.precautions.length > 0 && (
+          {exercise.cautions && exercise.cautions.length > 0 && (
             <div className="mb-6">
               <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
                 <ShieldExclamationIcon className="h-5 w-5 text-purple-600" />
@@ -534,17 +776,17 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
               </h2>
               <div className="bg-red-50 rounded-lg p-4">
                 <ul className="space-y-2">
-                  {exercise.precautions.map((precaution, index) => (
+                  {exercise.cautions.map((caution, index) => (
                     <li key={index} className="flex items-start gap-2">
                       <FiAlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                      <span>{precaution}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          )}
-          
+                      <span>{caution}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                  </div>
+                )}
+                
           {/* Informações sobre o vídeo */}
           {exercise.isVideoExercise && exercise.videoAuthor && (
             <div className="mb-6">
@@ -562,16 +804,16 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
                 )}
                 <div className="mt-3 text-xs text-gray-500">
                   <p>Este vídeo foi adaptado para melhor experiência educacional, sem fins comerciais.</p>
-                </div>
+                        </div>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
-        </div>
         
         {/* Barra de ações fixa no rodapé */}
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex items-center justify-between backdrop-blur-sm bg-white/90">
           <div className="flex gap-2">
-            <button 
+            <button
               onClick={() => {
                 playTap();
                 setSoundEnabled(prev => !prev);
@@ -589,7 +831,7 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
           
           <div className="flex gap-2">
             <button
-              onClick={handleStepByStepMode}
+              onClick={handleStartStepByStep}
               className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-colors ${
                 showStepByStepMode 
                   ? 'bg-purple-600 text-white' 
@@ -600,8 +842,8 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
               <ChevronRightIcon className="h-4 w-4" />
               Passo a Passo
             </button>
-            
-            <button
+          
+          <button
               onClick={completed ? () => {
                 playTap();
                 setCompleted(false);
@@ -624,10 +866,10 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
                   Concluir
                 </>
               )}
-            </button>
-          </div>
+          </button>
         </div>
-        
+      </div>
+
         {/* Diálogo de confirmação de conclusão */}
         {showCompletionDialog && (
           <CompletionDialog
@@ -637,8 +879,8 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
         )}
         
         {/* Efeito de confetti para celebrar a conclusão */}
-        {showConfetti && <ConfettiEffect />}
-      </div>
+        {showConfetti && <ConfettiEffect active={true} />}
+    </div>
     </ErrorBoundary>
   );
 };

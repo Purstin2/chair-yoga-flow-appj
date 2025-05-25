@@ -8,7 +8,7 @@ import ExerciseDetail from "@/components/ExerciseDetail";
 import MeditationLibrary from "@/components/MeditationLibrary";
 import ProfileScreen from "@/components/ProfileScreen";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { allExercises } from "@/data/index";
+import { getAllNonVideoExercises, getVideoExercises } from "@/data/allExercises";
 import RecipeLibrary from "@/components/RecipeLibrary";
 
 type View = 'dashboard' | 'program' | 'exercises' | 'exercise-detail' | 'meditation' | 'profile' | 'nutrition';
@@ -255,6 +255,9 @@ const Index = () => {
     setCurrentView('profile');
   };
 
+  // Combinar todos os exercícios para passar para o ExerciseLibrary
+  const allAvailableExercises = [...getAllNonVideoExercises(), ...getVideoExercises()];
+  
   // Handle onboarding flow
   if (!dataLoaded) {
     return (
@@ -297,6 +300,7 @@ const Index = () => {
 
             {currentView === 'exercises' && (
               <ExerciseLibrary
+                exercises={allAvailableExercises}
                 onBack={() => setCurrentView('dashboard')}
                 onSelectExercise={handleExerciseSelect}
                 user={currentUser}

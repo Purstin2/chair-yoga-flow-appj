@@ -3,7 +3,8 @@ import {
   ArrowLeftIcon, 
   ChevronRightIcon, 
   PlayIcon, 
-  PauseIcon 
+  PauseIcon,
+  CheckIcon 
 } from '@heroicons/react/24/outline';
 import { Exercise } from '@/types';
 
@@ -21,14 +22,15 @@ const StepByStepGuide: React.FC<StepByStepGuideProps> = ({
   const [currentStep, setCurrentStep] = useState(0);
   const [stepProgress, setStepProgress] = useState(0);
   const [stepTimeLeft, setStepTimeLeft] = useState(0);
-  const [isStepRunning, setIsStepRunning] = useState(false);
+  const [isStepRunning, setIsStepRunning] = useState(true); // Auto-start by default
+  const [autoMode, setAutoMode] = useState(true); // Enable auto mode by default
   const stepTimerRef = useRef<number | null>(null);
   const stepsRef = useRef<HTMLDivElement>(null);
 
   // Determine if the exercise has step-by-step execution info
   const hasDetailedExecution = exercise.executionSteps && exercise.executionSteps.length > 0;
   
-  // Set initial step time when component mounts
+  // Set initial step time when component mounts or step changes
   useEffect(() => {
     const initialDuration = hasDetailedExecution && exercise.executionSteps 
       ? exercise.executionSteps[currentStep]?.duration 
@@ -47,9 +49,15 @@ const StepByStepGuide: React.FC<StepByStepGuideProps> = ({
     }
   }, [currentStep]);
 
-  // Clean up timer when component unmounts
+  // Start timer automatically when component mounts
   useEffect(() => {
+    // Small delay to make sure UI is rendered before starting
+    const timer = setTimeout(() => {
+      startStepTimer();
+    }, 500);
+    
     return () => {
+      clearTimeout(timer);
       if (stepTimerRef.current) {
         clearInterval(stepTimerRef.current);
       }
@@ -84,7 +92,15 @@ const StepByStepGuide: React.FC<StepByStepGuideProps> = ({
             : exercise.instructions.length;
             
           if (currentStep < totalSteps - 1) {
-            setCurrentStep(prev => prev + 1);
+            const nextStep = currentStep + 1;
+            setCurrentStep(nextStep);
+            
+            // Start timer for next step after a short delay
+            if (autoMode) {
+              setTimeout(() => {
+                startStepTimer();
+              }, 300);
+            }
           } else {
             // Exercise complete
             onComplete();
@@ -102,7 +118,15 @@ const StepByStepGuide: React.FC<StepByStepGuideProps> = ({
         return prev - 1;
       });
     }, 1000);
-  }, [currentStep, hasDetailedExecution, exercise.executionSteps, exercise.instructions?.length, onComplete]);
+  }, [currentStep, hasDetailedExecution, exercise.executionSteps, exercise.instructions?.length, onComplete, autoMode]);
+
+  // Get total steps count
+  const totalSteps = hasDetailedExecution && exercise.executionSteps 
+    ? exercise.executionSteps.length 
+    : exercise.instructions.length;
+    
+  // Check if this is the last step
+  const isLastStep = currentStep === totalSteps - 1;
 
   return (
     <div className="fixed inset-0 bg-white z-50 flex flex-col">
@@ -117,7 +141,7 @@ const StepByStepGuide: React.FC<StepByStepGuideProps> = ({
         </button>
       </div>
       
-      <div className="flex-1 p-6 flex flex-col items-center justify-center">
+      <div className="flex-1 p-6 flex flex-col items-center justify-center" ref={stepsRef}>
         {exercise.photoUrl ? (
           <div className="w-48 h-48 rounded-lg mb-6 overflow-hidden">
             <img 
@@ -137,28 +161,34 @@ const StepByStepGuide: React.FC<StepByStepGuideProps> = ({
         )}
 
         <h3 className="text-2xl font-bold text-gray-900 mb-4 text-center">
-          Passo {currentStep + 1} de {hasDetailedExecution && exercise.executionSteps
-            ? exercise.executionSteps.length
-            : exercise.instructions.length}
+          Passo {currentStep + 1} de {totalSteps}
         </h3>
         
-        <p className="text-xl text-center text-gray-700 mb-8">
+        <p className={`text-xl text-center text-gray-700 mb-8 step-${currentStep}`}>
           {hasDetailedExecution && exercise.executionSteps
             ? exercise.executionSteps[currentStep]?.instruction
             : exercise.instructions[currentStep]}
         </p>
         
         <div className="mb-8 w-full max-w-sm">
-          <p className="text-center text-gray-600 mb-2">
-            Duração: {stepTimeLeft} segundos
-          </p>
+          <div className="flex justify-between items-center text-sm mb-2">
+            <span className="text-gray-600">Progresso</span>
+            <span className="font-medium">{stepTimeLeft} segundos</span>
+          </div>
           <div className="w-full bg-gray-200 rounded-full h-4">
             <div 
-              className="h-4 rounded-full bg-purple-600 transition-all duration-500 ease-in-out"
+              className="h-4 rounded-full bg-purple-600 transition-all duration-1000 ease-in-out"
               style={{ width: `${stepProgress}%` }}
             />
           </div>
         </div>
+        
+        {/* Status para avançar automaticamente */}
+        {autoMode && (
+          <p className="text-center text-gray-500 text-sm mb-4">
+            Avançando automaticamente em {stepTimeLeft} segundos...
+          </p>
+        )}
       </div>
         
       <div className="bg-gray-100 p-4 flex justify-around">
@@ -168,8 +198,10 @@ const StepByStepGuide: React.FC<StepByStepGuideProps> = ({
               clearInterval(stepTimerRef.current);
             }
             setCurrentStep(prev => Math.max(0, prev - 1));
+            // Auto-restart timer for new step
+            setTimeout(() => startStepTimer(), 100);
           }}
-          disabled={currentStep === 0}
+          disabled={currentStep === 0 || autoMode}
           className="p-3 rounded-full bg-white shadow disabled:opacity-50"
           aria-label="Passo anterior"
         >
@@ -178,20 +210,20 @@ const StepByStepGuide: React.FC<StepByStepGuideProps> = ({
         
         <button
           onClick={() => {
-            // Pause/Resume timer
-            if (isStepRunning) {
-              if (stepTimerRef.current) {
-                clearInterval(stepTimerRef.current);
-              }
-              setIsStepRunning(false);
-            } else {
+            // Toggle auto mode
+            setAutoMode(prev => !prev);
+            
+            if (!isStepRunning) {
               startStepTimer();
+            } else if (stepTimerRef.current) {
+              clearInterval(stepTimerRef.current);
+              setIsStepRunning(false);
             }
           }}
           className="p-3 rounded-full bg-white shadow"
-          aria-label={isStepRunning ? "Pausar" : "Iniciar"}
+          aria-label={autoMode ? "Desativar avanço automático" : "Ativar avanço automático"}
         >
-          {isStepRunning ? (
+          {autoMode ? (
             <PauseIcon className="h-6 w-6 text-purple-700" />
           ) : (
             <PlayIcon className="h-6 w-6 text-purple-700" />
@@ -203,21 +235,24 @@ const StepByStepGuide: React.FC<StepByStepGuideProps> = ({
             if (stepTimerRef.current) {
               clearInterval(stepTimerRef.current);
             }
-            const totalSteps = hasDetailedExecution && exercise.executionSteps 
-              ? exercise.executionSteps.length 
-              : exercise.instructions.length;
             
             if (currentStep < totalSteps - 1) {
               setCurrentStep(prev => prev + 1);
+              // Auto-restart timer for new step
+              setTimeout(() => startStepTimer(), 100);
+            } else if (isLastStep) {
+              onComplete();
             }
           }}
-          disabled={currentStep === (hasDetailedExecution && exercise.executionSteps 
-            ? exercise.executionSteps.length 
-            : exercise.instructions.length) - 1}
-          className="p-3 rounded-full bg-white shadow disabled:opacity-50"
-          aria-label="Próximo passo"
+          disabled={!isLastStep && autoMode}
+          className={`p-3 rounded-full shadow ${isLastStep ? 'bg-green-600' : 'bg-white'}`}
+          aria-label={isLastStep ? "Concluir exercício" : "Próximo passo"}
         >
-          <ChevronRightIcon className="h-6 w-6 text-purple-700" />
+          {isLastStep ? (
+            <CheckIcon className="h-6 w-6 text-white" />
+          ) : (
+            <ChevronRightIcon className="h-6 w-6 text-purple-700" />
+          )}
         </button>
       </div>
     </div>
