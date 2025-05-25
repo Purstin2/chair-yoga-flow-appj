@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeftIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { UserProgress, User } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Header from './Header';
 
 interface ProgramCalendarProps {
