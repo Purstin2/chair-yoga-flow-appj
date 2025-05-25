@@ -43,21 +43,6 @@ export interface DailyCheckin {
   notes?: string;
 }
 
-export interface UserQuizData {
-  age: string;
-  activityLevel: string;
-  painAreas: string[];
-  availableTime: string;
-  healthConditions: string[];
-  medication: boolean;
-  previousInjury: boolean;
-  currentPainLevel?: number;
-  medications?: string[];
-  recentSurgeries?: boolean;
-  surgeryDetails?: string;
-  sleepQuality?: string;
-}
-
 export interface Exercise {
   id: number;
   name: string;

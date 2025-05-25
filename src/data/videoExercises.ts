@@ -42,7 +42,7 @@ const videoExercises: Exercise[] = [
       "Respeite seus limites de amplitude"
     ],
     isVideoExercise: true,
-    videoUrl: "https://www.youtube.com/embed/X8MRER4T86w",
+    videoUrl: "https://www.youtube.com/embed/u6LAW08hKZ4",
     videoSource: "YouTube",
     videoAuthor: "Especialista em Yoga",
     videoDescription: "Sequência de yoga para aliviar tensão e dores na região cervical, pescoço e ombros."
@@ -88,7 +88,7 @@ const videoExercises: Exercise[] = [
       "Evite se tiver hérnia de disco aguda"
     ],
     isVideoExercise: true,
-    videoUrl: "https://www.youtube.com/embed/DYhlXlp24qs",
+    videoUrl: "https://www.youtube.com/embed/4PQudKmqWW8",
     videoSource: "YouTube",
     videoAuthor: "Especialista em Yoga",
     videoDescription: "Sequência para aliviar dores na região lombar e no nervo ciático com posturas de yoga terapêutica."
@@ -134,7 +134,7 @@ const videoExercises: Exercise[] = [
       "Consulte um médico para casos graves"
     ],
     isVideoExercise: true,
-    videoUrl: "https://www.youtube.com/embed/S4iD6dElrDA",
+    videoUrl: "https://www.youtube.com/embed/u83PMJNERNw",
     videoSource: "YouTube",
     videoAuthor: "Especialista em Fisioterapia",
     videoDescription: "Exercícios específicos para aliviar os sintomas do túnel do carpo e melhorar a mobilidade dos punhos."
@@ -232,282 +232,6 @@ const videoExercises: Exercise[] = [
     videoDescription: "Sequência rápida para aliviar tensão e dor nos ombros e pescoço, ideal para quem trabalha no computador."
   },
   {
-    id: 1006,
-    name: "Alívio para Joelhos",
-    duration: "10",
-    difficulty: "Fácil",
-    category: "Membros Inferiores",
-    description: "Sequência de exercícios para aliviar dores e fortalecer as articulações dos joelhos, especialmente para pessoas com artrose ou lesões leves.",
-    benefits: "Fortalecimento da musculatura ao redor dos joelhos, melhora da estabilidade e redução da dor.",
-    purposePoints: [
-      "Aliviar dores nas articulações dos joelhos",
-      "Fortalecer os músculos estabilizadores do joelho",
-      "Aumentar a amplitude de movimento",
-      "Melhorar a circulação na região"
-    ],
-    instructions: [
-      "Sente-se com as costas eretas",
-      "Estenda uma perna e flexione lentamente o joelho",
-      "Faça rotações suaves com o tornozelo",
-      "Realize contrações isométricas do quadríceps",
-      "Finalize com alongamentos leves"
-    ],
-    detailedInstructions: {
-      position: "Sentada com as costas apoiadas no encosto da cadeira",
-      movement: "Movimentos lentos e controlados focados na articulação do joelho",
-      breathing: "Respiração profunda e constante",
-      benefit: "Redução da dor e maior mobilidade nos joelhos",
-      caution: "Evite qualquer movimento que cause dor aguda"
-    },
-    icon: "knee",
-    targetAreas: ["Joelhos", "Quadríceps", "Isquiotibiais"],
-    adaptations: {
-      pain: ["Reduza a amplitude dos movimentos", "Use almofadas para apoio"],
-      tired: ["Faça apenas metade dos exercícios", "Diminua o número de repetições"],
-      energized: ["Aumente as repetições", "Adicione pequena resistência com faixa elástica"]
-    },
-    cautions: [
-      "Interrompa se sentir dor aguda",
-      "Evite impacto ou movimentos bruscos",
-      "Consulte um médico em caso de lesão recente"
-    ],
-    isVideoExercise: true,
-    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-    videoSource: "YouTube",
-    videoAuthor: "Especialista em Fisioterapia",
-    videoDescription: "Exercícios terapêuticos para aliviar dores nos joelhos e fortalecer as articulações de forma segura."
-  },
-  {
-    id: 1007,
-    name: "Alívio para Tornozelos",
-    duration: "8",
-    difficulty: "Fácil",
-    category: "Membros Inferiores",
-    description: "Exercícios específicos para melhorar a mobilidade dos tornozelos e reduzir desconfortos, ideal para pessoas com artrite ou após entorses leves.",
-    benefits: "Melhora da circulação, redução do inchaço e aumento da estabilidade dos tornozelos.",
-    purposePoints: [
-      "Aliviar dor e rigidez nos tornozelos",
-      "Aumentar a amplitude de movimento",
-      "Melhorar a propriocepção e equilíbrio",
-      "Reduzir inchaço e melhorar circulação"
-    ],
-    instructions: [
-      "Sente-se confortavelmente na cadeira",
-      "Eleve um pé do chão",
-      "Realize movimentos circulares com o tornozelo",
-      "Flexione e estenda o pé lentamente",
-      "Repita com o outro pé"
-    ],
-    detailedInstructions: {
-      position: "Sentada com os pés apoiados no chão inicialmente",
-      movement: "Movimentos circulares, flexões e extensões suaves do tornozelo",
-      breathing: "Respiração natural e relaxada",
-      benefit: "Mobilidade melhorada e redução de edema",
-      caution: "Evite forçar além do limite de conforto"
-    },
-    icon: "foot",
-    targetAreas: ["Tornozelos", "Pés", "Panturrilhas"],
-    adaptations: {
-      pain: ["Diminua a amplitude dos movimentos", "Faça movimentos mais lentos"],
-      tired: ["Reduza o número de repetições", "Alterne entre os pés mais frequentemente"],
-      energized: ["Aumente o número de repetições", "Adicione pequenas resistências"]
-    },
-    cautions: [
-      "Não force tornozelos inflamados",
-      "Evite movimentos bruscos",
-      "Interrompa se sentir dor aguda"
-    ],
-    isVideoExercise: true,
-    videoUrl: "https://www.youtube.com/embed/9bZkp7q19f0",
-    videoSource: "YouTube",
-    videoAuthor: "Especialista em Fisioterapia",
-    videoDescription: "Sequência de exercícios para melhorar a mobilidade dos tornozelos e aliviar dores e inchaços."
-  },
-  {
-    id: 1008,
-    name: "Alívio para Quadril",
-    duration: "12",
-    difficulty: "Médio",
-    category: "Quadril",
-    description: "Rotina focada na mobilidade e alívio de tensão no quadril, ideal para pessoas sedentárias ou com dores crônicas na região pélvica.",
-    benefits: "Redução da rigidez, melhora da amplitude de movimento e alívio de dores irradiadas para a lombar e pernas.",
-    purposePoints: [
-      "Aliviar tensão e dor na articulação do quadril",
-      "Melhorar a mobilidade pélvica",
-      "Fortalecer os músculos estabilizadores",
-      "Reduzir dores referidas na lombar e joelhos"
-    ],
-    instructions: [
-      "Sente-se na beirada da cadeira",
-      "Realize rotações suaves do quadril",
-      "Faça inclinações pélvicas para frente e para trás",
-      "Eleve um joelho de cada vez em direção ao peito",
-      "Finalize com alongamentos dos rotadores do quadril"
-    ],
-    detailedInstructions: {
-      position: "Sentada com os pés apoiados no chão, postura ereta",
-      movement: "Movimentos circulares e de báscula pélvica",
-      breathing: "Respiração profunda, exalando durante alongamentos",
-      benefit: "Maior mobilidade e redução da tensão no quadril",
-      caution: "Mantenha os movimentos controlados e evite compensações com a lombar"
-    },
-    icon: "hip",
-    targetAreas: ["Quadril", "Pelve", "Rotadores Externos e Internos"],
-    adaptations: {
-      pain: ["Use almofadas para apoio", "Reduza a amplitude dos movimentos"],
-      tired: ["Faça menos repetições", "Foque nos movimentos mais confortáveis"],
-      energized: ["Aumente o tempo de permanência nos alongamentos", "Adicione mais repetições"]
-    },
-    cautions: [
-      "Evite forçar além do limite confortável",
-      "Mantenha a lombar apoiada quando necessário",
-      "Não é recomendado após cirurgias recentes no quadril"
-    ],
-    isVideoExercise: true,
-    videoUrl: "https://www.youtube.com/embed/jNQXAC9IVRw",
-    videoSource: "YouTube",
-    videoAuthor: "Especialista em Yoga",
-    videoDescription: "Sequência terapêutica para melhorar a mobilidade do quadril e aliviar dores na região pélvica e lombar."
-  },
-  {
-    id: 1009,
-    name: "Alívio para Mãos e Dedos",
-    duration: "7",
-    difficulty: "Fácil",
-    category: "Membros Superiores",
-    description: "Exercícios delicados para as mãos e dedos, ideal para pessoas com artrite, tendinite ou que usam teclado por longos períodos.",
-    benefits: "Maior destreza, redução da rigidez e alívio da dor nas articulações das mãos.",
-    purposePoints: [
-      "Aliviar dor e rigidez nas articulações dos dedos",
-      "Melhorar a flexibilidade e amplitude de movimento",
-      "Fortalecer os pequenos músculos das mãos",
-      "Melhorar a circulação sanguínea nas extremidades"
-    ],
-    instructions: [
-      "Estenda os braços à frente com as palmas para cima",
-      "Abra e feche as mãos lentamente",
-      "Toque cada dedo com o polegar sequencialmente",
-      "Faça movimentos circulares com os polegares",
-      "Alongue cada dedo individualmente"
-    ],
-    detailedInstructions: {
-      position: "Sentada com os braços apoiados ou estendidos à frente",
-      movement: "Movimentos precisos e lentos de cada articulação dos dedos",
-      breathing: "Respiração suave e constante",
-      benefit: "Maior mobilidade e redução da dor nas mãos",
-      caution: "Movimentos suaves, sem forçar articulações inflamadas"
-    },
-    icon: "hand",
-    targetAreas: ["Dedos", "Mãos", "Punhos"],
-    adaptations: {
-      pain: ["Reduza a amplitude", "Use água morna para aquecer as mãos antes"],
-      tired: ["Faça pausas frequentes", "Alterne entre diferentes movimentos"],
-      energized: ["Aumente as repetições", "Adicione leve resistência com bola de fisioterapia"]
-    },
-    cautions: [
-      "Evite movimentos que causem dor aguda",
-      "Seja especialmente gentil com articulações inflamadas",
-      "Não force dedos com deformidades"
-    ],
-    isVideoExercise: true,
-    videoUrl: "https://www.youtube.com/embed/jofNR_WkoCE",
-    videoSource: "YouTube",
-    videoAuthor: "Especialista em Terapia Ocupacional",
-    videoDescription: "Exercícios suaves para as mãos e dedos, focados em aliviar dores e melhorar a mobilidade."
-  },
-  {
-    id: 1010,
-    name: "Alívio para Coluna Torácica",
-    duration: "10",
-    difficulty: "Médio",
-    category: "Coluna",
-    description: "Sequência para melhorar a mobilidade da coluna torácica e aliviar tensões entre as escápulas, ideal para quem passa muito tempo sentado.",
-    benefits: "Melhora da postura, redução de dores entre as escápulas e maior mobilidade respiratória.",
-    purposePoints: [
-      "Aliviar tensão na região torácica",
-      "Melhorar a mobilidade das costelas e coluna média",
-      "Expandir a capacidade respiratória",
-      "Reduzir dores entre as escápulas"
-    ],
-    instructions: [
-      "Sente-se ereta com os pés apoiados no chão",
-      "Cruze os braços em frente ao peito",
-      "Realize rotações suaves do tronco para cada lado",
-      "Faça extensões da coluna apoiando as mãos nas costas",
-      "Finalize com respirações profundas expandindo as costelas"
-    ],
-    detailedInstructions: {
-      position: "Sentada ereta, afastada do encosto da cadeira",
-      movement: "Rotações suaves do tronco e extensões da coluna torácica",
-      breathing: "Respiração profunda expandindo as costelas lateralmente",
-      benefit: "Maior mobilidade da caixa torácica e alívio de tensões",
-      caution: "Mantenha os movimentos dentro da zona de conforto"
-    },
-    icon: "spine",
-    targetAreas: ["Coluna Torácica", "Escápulas", "Costelas", "Intercostais"],
-    adaptations: {
-      pain: ["Reduza a amplitude de rotação", "Use apoio para as mãos"],
-      tired: ["Faça menos repetições", "Mantenha os movimentos mais lentos"],
-      energized: ["Aumente as repetições", "Amplie a amplitude de movimento"]
-    },
-    cautions: [
-      "Evite movimentos bruscos",
-      "Não force extensões excessivas da coluna",
-      "Tenha cuidado extra em caso de osteoporose"
-    ],
-    isVideoExercise: true,
-    videoUrl: "https://www.youtube.com/embed/fJ9rUzIMcZQ",
-    videoSource: "YouTube",
-    videoAuthor: "Especialista em Fisioterapia",
-    videoDescription: "Exercícios focados na mobilidade da coluna torácica e alívio de tensões na região das escápulas."
-  },
-  {
-    id: 1011,
-    name: "Alívio para Cotovelos",
-    duration: "9",
-    difficulty: "Fácil",
-    category: "Membros Superiores",
-    description: "Exercícios focados no alívio de dores nos cotovelos, especialmente útil para quem sofre de epicondilite (cotovelo de tenista) ou epitrocleíte (cotovelo de golfista).",
-    benefits: "Redução da inflamação, alívio da dor e fortalecimento dos músculos do antebraço.",
-    purposePoints: [
-      "Aliviar dor nos cotovelos",
-      "Melhorar a flexibilidade da articulação",
-      "Fortalecer os músculos do antebraço",
-      "Reduzir tensão nos tendões"
-    ],
-    instructions: [
-      "Sente-se com as costas apoiadas",
-      "Estenda o braço afetado à frente",
-      "Realize flexões e extensões suaves do cotovelo",
-      "Faça rotações do antebraço com o cotovelo dobrado",
-      "Termine com alongamentos dos flexores e extensores do punho"
-    ],
-    detailedInstructions: {
-      position: "Sentada com braços apoiados ou à frente do corpo",
-      movement: "Movimentos lentos de flexão, extensão e rotação",
-      breathing: "Respiração tranquila, exalando durante alongamentos",
-      benefit: "Alívio da dor e tensão no cotovelo e antebraço",
-      caution: "Interrompa qualquer movimento que aumente a dor"
-    },
-    icon: "arm",
-    targetAreas: ["Cotovelos", "Antebraços", "Tendões do Punho"],
-    adaptations: {
-      pain: ["Reduza a amplitude", "Use compressas mornas antes dos exercícios"],
-      tired: ["Diminua as repetições", "Faça apenas os movimentos mais confortáveis"],
-      energized: ["Aumente o número de repetições", "Adicione alongamentos mais profundos"]
-    },
-    cautions: [
-      "Evite carregar peso ou fazer esforço durante inflamação aguda",
-      "Interrompa se a dor aumentar",
-      "Consulte um fisioterapeuta se a dor persistir"
-    ],
-    isVideoExercise: true,
-    videoUrl: "https://www.youtube.com/embed/UVmRrZo0Gz4",
-    videoSource: "YouTube",
-    videoAuthor: "Especialista em Fisioterapia",
-    videoDescription: "Exercícios terapêuticos para aliviar dores nos cotovelos e fortalecer a musculatura do antebraço."
-  },
-  {
     id: 1016,
     name: "Alívio para Coluna Sacral",
     duration: "15",
@@ -548,7 +272,7 @@ const videoExercises: Exercise[] = [
       "Tenha cuidado extra em caso de osteoporose"
     ],
     isVideoExercise: true,
-    videoUrl: "https://www.youtube.com/embed/970sRjQ5rh8",
+    videoUrl: "https://www.youtube.com/embed/0lne2PMjKrY",
     videoSource: "YouTube",
     videoAuthor: "Especialista em Yoga",
     videoDescription: "Exercícios focados na mobilidade da coluna sacral e alívio de tensões na região lombar."
@@ -594,7 +318,7 @@ const videoExercises: Exercise[] = [
       "Consulte um fisioterapeuta se a dor persistir"
     ],
     isVideoExercise: true,
-    videoUrl: "https://www.youtube.com/embed/fJ9rUzIMcZQ",
+    videoUrl: "https://www.youtube.com/embed/c6-IbuL8OQE",
     videoSource: "YouTube",
     videoAuthor: "Especialista em Fisioterapia",
     videoDescription: "Exercícios para aliviar dores e fortalecer os músculos do ombro."
@@ -640,7 +364,7 @@ const videoExercises: Exercise[] = [
       "Consulte um fisioterapeuta se a dor persistir"
     ],
     isVideoExercise: true,
-    videoUrl: "https://www.youtube.com/embed/JGwWNGJdvx8",
+    videoUrl: "https://www.youtube.com/embed/8LdaEaf3l1U",
     videoSource: "YouTube",
     videoAuthor: "Especialista em Fisioterapia",
     videoDescription: "Exercícios para aliviar dores e fortalecer os músculos do quadril."

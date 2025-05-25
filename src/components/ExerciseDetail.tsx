@@ -11,12 +11,8 @@ import {
   SpeakerXMarkIcon,
   BoltIcon,
   ChevronRightIcon,
-  ChartBarIcon,
   InformationCircleIcon,
-  BeakerIcon,
   ShieldExclamationIcon,
-  ArrowPathRoundedSquareIcon,
-  AdjustmentsHorizontalIcon,
   BookmarkIcon,
   LightBulbIcon
 } from '@heroicons/react/24/outline';
@@ -27,13 +23,16 @@ import {
 } from 'react-icons/fi';
 import { Exercise } from '@/types';
 import { formatTime } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
+import { Card, CardContent } from './ui/Card';
 import Header from './Header';
-import ExerciseTimer from './ExerciseTimer';
 import ConfettiEffect from './ConfettiEffect';
 import ErrorBoundary from './ErrorBoundary';
-import ExerciseScreen from './ExerciseScreen';
 import { getCategoryColor, getCategoryIcon, IconType } from '@/data/exerciseCategories';
+import VideoEmbed from './VideoEmbed';
+import CompletionDialog from './CompletionDialog';
+import StepByStepGuide from './StepByStepGuide';
+import useSounds from '@/hooks/useSounds';
+import { completeExercise, isExerciseCompleted } from '@/lib/userApi';
 
 interface ExerciseDetailProps {
   exercise: Exercise;
@@ -43,53 +42,6 @@ interface ExerciseDetailProps {
   user: any;
   onProfileClick: () => void;
 }
-
-// Componente para incorporar vídeos
-const VideoEmbed = ({ videoUrl }: { videoUrl: string }) => {
-  // Verificar se é um vídeo do Vimeo ou YouTube e ajustar parâmetros
-  const isVimeo = videoUrl.includes('vimeo.com');
-  const isYouTube = videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be');
-  
-  let embedUrl = videoUrl;
-  
-  if (isYouTube) {
-    // Garantir que a URL já não tenha parâmetros
-    if (embedUrl.includes('?')) {
-      // Se já tiver parâmetros, apenas adicionar os que faltam
-      if (!embedUrl.includes('rel=0')) embedUrl += '&rel=0';
-      if (!embedUrl.includes('modestbranding=1')) embedUrl += '&modestbranding=1';
-    } else {
-      // Adicionar parâmetros para melhorar compatibilidade com YouTube
-      embedUrl = `${videoUrl}?rel=0&modestbranding=1`;
-    }
-  } else if (isVimeo) {
-    // Ajustar parâmetros para Vimeo
-    if (videoUrl.includes('player.vimeo.com')) {
-      embedUrl = `${videoUrl}?autoplay=0&title=0&byline=0&portrait=0`;
-    } else {
-      // Converter URL normal do Vimeo para URL de incorporação
-      const vimeoId = videoUrl.split('/').pop();
-      embedUrl = `https://player.vimeo.com/video/${vimeoId}?autoplay=0&title=0&byline=0&portrait=0`;
-    }
-  }
-  
-  return (
-    <div className="aspect-video w-full rounded-2xl mb-4 overflow-hidden">
-      <iframe 
-        width="100%" 
-        height="100%" 
-        src={embedUrl}
-        title="Video player" 
-        frameBorder="0" 
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-        allowFullScreen
-      ></iframe>
-    </div>
-  );
-};
-
-// Manter compatibilidade com código existente
-const YouTubeEmbed = VideoEmbed;
 
 const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
   exercise,
@@ -105,78 +57,30 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
   const [showTrainingMode, setShowTrainingMode] = useState(false);
   const [showStepByStepMode, setShowStepByStepMode] = useState(false);
   const [showAutoMode, setShowAutoMode] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [isScrolling, setIsScrolling] = useState(false);
+  const [highlightedStep, setHighlightedStep] = useState<number | null>(null);
   
   // Diálogo de confirmação ao final do exercício
   const [showCompletionDialog, setShowCompletionDialog] = useState(false);
   
-  // Determine if the exercise has step-by-step execution info (mover para cima)
+  // Referência para a lista de passos
+  const stepsRef = useRef<HTMLDivElement>(null);
+  
+  // Use o hook de sons personalizado
+  const { 
+    enabled: soundEnabled, 
+    setEnabled: setSoundEnabled, 
+    playSuccess,
+    playNotification,
+    playTap 
+  } = useSounds();
+  
+  // Determine if the exercise has step-by-step execution info
   const hasDetailedExecution = exercise.executionSteps && exercise.executionSteps.length > 0;
   
-  // Mover os hooks do modo step-by-step para o nível superior
-  const [stepProgress, setStepProgress] = useState(0);
-  const [stepTimeLeft, setStepTimeLeft] = useState(
-    hasDetailedExecution && exercise.executionSteps 
-      ? exercise.executionSteps[currentStep]?.duration 
-      : 15
-  );
-  const stepTimerRef = useRef<number | null>(null);
-  const [isStepRunning, setIsStepRunning] = useState(false);
-  const stepsRef = useRef<HTMLDivElement>(null);
-
   // Get category color and icon
   const categoryColor = getCategoryColor(exercise.category);
   const categoryIconType = getCategoryIcon(exercise.category);
-
-  // Iniciar o timer para o passo atual
-  const startStepTimer = useCallback(() => {
-    if (!showStepByStepMode) return;
-    
-    if (stepTimerRef.current) {
-      clearInterval(stepTimerRef.current);
-    }
-
-    const stepDuration = hasDetailedExecution && exercise.executionSteps 
-      ? exercise.executionSteps[currentStep]?.duration 
-      : 15;
-    
-    setStepTimeLeft(stepDuration);
-    setStepProgress(0);
-    setIsStepRunning(true);
-    
-    stepTimerRef.current = window.setInterval(() => {
-      setStepTimeLeft(prev => {
-        if (prev <= 1) {
-          if (stepTimerRef.current) {
-            clearInterval(stepTimerRef.current);
-          }
-          setIsStepRunning(false);
-          
-          // Avançar para o próximo passo quando o tempo acabar
-          const totalSteps = hasDetailedExecution && exercise.executionSteps 
-            ? exercise.executionSteps.length 
-            : exercise.instructions.length;
-            
-          if (currentStep < totalSteps - 1) {
-            setCurrentStep(prev => prev + 1);
-          } else {
-            // Exercício completo
-            handleTimerComplete();
-          }
-          
-          return 0;
-        }
-        
-        // Atualizar o progresso
-        const duration = hasDetailedExecution && exercise.executionSteps 
-          ? exercise.executionSteps[currentStep]?.duration 
-          : 15;
-        
-        setStepProgress(((duration - prev + 1) / duration) * 100);
-        return prev - 1;
-      });
-    }, 1000);
-  }, [currentStep, hasDetailedExecution, exercise.executionSteps, exercise.instructions?.length, showStepByStepMode]);
 
   // Function to get category icon based on type
   const getCategoryIconComponent = (iconType: IconType) => {
@@ -201,798 +105,541 @@ const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
         return <FiSun className="h-5 w-5" />;
       case 'wind':
         return <FiWind className="h-5 w-5" />;
+      case 'target':
+        return <FiTarget className="h-5 w-5" />;
+      case 'list':
+        return <FiList className="h-5 w-5" />;
+      case 'alert':
+        return <FiAlertTriangle className="h-5 w-5" />;
+      case 'chart':
+        return <FiBarChart2 className="h-5 w-5" />;
+      case 'check':
+        return <FiCheckCircle className="h-5 w-5" />;
       default:
         return <FiActivity className="h-5 w-5" />;
     }
   };
+  
+  const handleAutoMode = () => toggleAutoMode();
+  const handleTrainingMode = () => toggleTrainingMode();
+  const handleStepByStepMode = () => toggleStepByStepMode();
+  const handleAudioGuide = () => toggleAutoMode(); // Usa o modo automático para guia com áudio
+  const handleStepByStep = () => toggleStepByStepMode(); // Usa o modo passo a passo
 
-  // Scroll to the current step when it changes
+  // Setup intersection observer for step highlighting
   useEffect(() => {
-    if (stepsRef.current) {
-      const activeStep = stepsRef.current.querySelector(`.step-${currentStep}`);
-      if (activeStep) {
-        activeStep.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }
-  }, [currentStep]);
-
-  // Adicionar event listeners para eventos personalizados disparados pelo ExerciseTimer
-  useEffect(() => {
-    const handleAutoMode = () => toggleAutoMode();
-    const handleTrainingMode = () => toggleTrainingMode();
-    const handleStepByStepMode = () => toggleStepByStepMode();
-    const handleAudioGuide = () => toggleAutoMode(); // Usa o modo automático para guia com áudio
-    const handleStepByStep = () => toggleStepByStepMode(); // Usa o modo passo a passo
+    if (!stepsRef.current || showStepByStepMode) return;
     
-    window.addEventListener('toggleAutoMode', handleAutoMode);
-    window.addEventListener('toggleTrainingMode', handleTrainingMode);
-    window.addEventListener('toggleStepByStepMode', handleStepByStepMode);
-    window.addEventListener('startAudioGuide', handleAudioGuide);
-    window.addEventListener('startStepByStep', handleStepByStep);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (isScrolling) return;
+        
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const stepId = entry.target.id;
+            const stepIndex = parseInt(stepId.split('-')[1], 10);
+            if (!isNaN(stepIndex)) {
+              setCurrentStep(stepIndex);
+              setHighlightedStep(stepIndex);
+            }
+          }
+        });
+      },
+      { 
+        root: null,
+        rootMargin: '-20% 0px -20% 0px',
+        threshold: 0.7
+      }
+    );
+    
+    // Observe each step element
+    const stepElements = stepsRef.current.querySelectorAll('[id^="step-"]');
+    stepElements.forEach(element => {
+      observer.observe(element);
+    });
     
     return () => {
-      window.removeEventListener('toggleAutoMode', handleAutoMode);
-      window.removeEventListener('toggleTrainingMode', handleTrainingMode);
-      window.removeEventListener('toggleStepByStepMode', handleStepByStepMode);
-      window.removeEventListener('startAudioGuide', handleAudioGuide);
-      window.removeEventListener('startStepByStep', handleStepByStep);
+      stepElements.forEach(element => {
+        observer.unobserve(element);
+      });
+    };
+  }, [showStepByStepMode, isScrolling]);
+
+  // Handle manual scrolling detection
+  useEffect(() => {
+    let scrollTimeout: NodeJS.Timeout;
+    
+    const handleScroll = () => {
+      setIsScrolling(true);
+      clearTimeout(scrollTimeout);
+      
+      scrollTimeout = setTimeout(() => {
+        setIsScrolling(false);
+      }, 150);
+    };
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearTimeout(scrollTimeout);
     };
   }, []);
 
-  // Iniciar timer quando o passo mudar no modo step-by-step
+  // Scroll to the selected step when manually changing step
   useEffect(() => {
-    if (!showStepByStepMode) return;
+    if (showStepByStepMode || isScrolling || highlightedStep === currentStep) return;
     
-    if (hasDetailedExecution && exercise.executionSteps) {
-      setStepTimeLeft(exercise.executionSteps[currentStep]?.duration || 15);
-    } else {
-      setStepTimeLeft(15); // Tempo padrão se não houver duração específica
-    }
-    
-    setStepProgress(0);
-    startStepTimer();
-    
-    // Limpar o timer quando desmontar
-    return () => {
-      if (stepTimerRef.current) {
-        clearInterval(stepTimerRef.current);
+    const scrollToSelectedStep = () => {
+      const element = document.getElementById(`step-${currentStep}`);
+      if (element) {
+        setIsScrolling(true);
+        element.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+        
+        // Reset scrolling flag after animation completes
+        setTimeout(() => {
+          setIsScrolling(false);
+          setHighlightedStep(currentStep);
+        }, 500);
       }
     };
-  }, [currentStep, hasDetailedExecution, exercise.executionSteps, startStepTimer, showStepByStepMode]);
+    
+    scrollToSelectedStep();
+  }, [currentStep, showStepByStepMode, isScrolling, highlightedStep]);
 
-  // Limpar timer quando o modo step-by-step for desativado
   useEffect(() => {
-    if (!showStepByStepMode && stepTimerRef.current) {
-      clearInterval(stepTimerRef.current);
-      setIsStepRunning(false);
+    // Limpar confetti após 3 segundos
+    if (showConfetti) {
+      const timer = setTimeout(() => {
+        setShowConfetti(false);
+      }, 3000);
+      
+      return () => clearTimeout(timer);
     }
-  }, [showStepByStepMode]);
+  }, [showConfetti]);
 
   const handleTimerComplete = () => {
-    // Mostrar diálogo de confirmação em vez de completar automaticamente
     setShowCompletionDialog(true);
+    setShowStepByStepMode(false);
+    setShowAutoMode(false);
   };
 
   const handleConfirmCompletion = () => {
-    // Usuário confirmou que concluiu o exercício
-    setShowConfetti(true);
     setCompleted(true);
     setShowCompletionDialog(false);
+    setShowConfetti(true);
     
-    // Notify parent
-    setTimeout(() => {
-      onComplete();
-      setShowConfetti(false);
-    }, 3000);
-  };
-
-  const handleRejectCompletion = () => {
-    // Usuário quer refazer o exercício
-    setShowCompletionDialog(false);
+    // Registrar conclusão com dados do exercício para estatísticas
+    completeExercise(exercise.id, {
+      category: exercise.category,
+      duration: exercise.duration
+    });
     
-    // Resetar para o primeiro passo
-    setCurrentStep(0);
+    onComplete();
     
-    // Reiniciar o timer se estiver no modo passo a passo
-    if (showStepByStepMode) {
-      startStepTimer();
+    // Tocar som de conclusão
+    playSuccess({ enableFeedback: true });
+    
+    // Fornecer feedback tátil
+    if ('vibrate' in navigator) {
+      navigator.vibrate([100, 50, 100]);
     }
   };
 
+  const handleRejectCompletion = () => {
+    setShowCompletionDialog(false);
+    playNotification({ enableFeedback: true });
+  };
+
   const handleComplete = () => {
-    setCompleted(true);
-    setShowConfetti(true);
-    onComplete();
-    
-    setTimeout(() => {
-      setShowConfetti(false);
-    }, 3000);
+    playTap();
+    setShowCompletionDialog(true);
   };
 
   const toggleTrainingMode = () => {
-    setShowTrainingMode(!showTrainingMode);
+    playTap();
+    setShowTrainingMode(prev => !prev);
     setShowStepByStepMode(false);
     setShowAutoMode(false);
   };
 
   const toggleStepByStepMode = () => {
-    setShowStepByStepMode(!showStepByStepMode);
+    playTap();
+    setShowStepByStepMode(prev => !prev);
     setShowTrainingMode(false);
     setShowAutoMode(false);
   };
 
   const toggleAutoMode = () => {
-    setShowAutoMode(!showAutoMode);
+    playTap();
+    setShowAutoMode(prev => !prev);
     setShowTrainingMode(false);
     setShowStepByStepMode(false);
   };
 
   const speakInstruction = (text: string) => {
-    if ('speechSynthesis' in window && soundEnabled) {
-      // Cancelar qualquer fala em andamento
+    if (!soundEnabled) return;
+    
+    if ('speechSynthesis' in window) {
+      // Cancelar qualquer fala anterior
       window.speechSynthesis.cancel();
       
       const utterance = new SpeechSynthesisUtterance(text);
+      
+      // Definir o idioma para português do Brasil
       utterance.lang = 'pt-BR';
-      utterance.rate = 0.85; // Velocidade um pouco mais lenta para melhor compreensão
-      utterance.pitch = 1.05; // Tom ligeiramente mais alto para voz feminina mais natural
-      utterance.volume = 1.0;
       
-      // Buscar as vozes disponíveis
+      // Ajustar a velocidade para falar mais devagar
+      utterance.rate = 0.9;
+      
+      // Escolher uma voz feminina se disponível
       const voices = window.speechSynthesis.getVoices();
-
-      // Tentar encontrar a melhor voz disponível
-      // Prioridade: 1. Voz premium/aprimorada em português brasileiro
-      //             2. Qualquer voz em português brasileiro
-      //             3. Qualquer voz em português
-      //             4. Voz padrão
-      const premiumVoice = voices.find(voice => 
-        (voice.name.includes('Premium') || 
-         voice.name.includes('Neural') || 
-         voice.name.includes('Enhanced') || 
-         voice.name.includes('Natural')) && 
-        voice.lang.includes('pt-BR')
-      );
+      const portugueseVoices = voices.filter(voice => voice.lang.includes('pt'));
       
-      if (premiumVoice) {
-        utterance.voice = premiumVoice;
-      } else {
-        const brVoice = voices.find(voice => voice.lang.includes('pt-BR'));
-        if (brVoice) {
-          utterance.voice = brVoice;
-        } else {
-          const ptVoice = voices.find(voice => voice.lang.includes('pt'));
-          if (ptVoice) {
-            utterance.voice = ptVoice;
-          }
-        }
+      if (portugueseVoices.length > 0) {
+        // Preferir voz feminina
+        const femaleVoice = portugueseVoices.find(voice => voice.name.includes('female') || voice.name.includes('Maria'));
+        utterance.voice = femaleVoice || portugueseVoices[0];
       }
       
-      // Adicionar um pequeno atraso para uma entrega mais natural
-      const shortPause = new SpeechSynthesisUtterance('.');
-      shortPause.volume = 0;
-      shortPause.rate = 0.1;
-      
-      window.speechSynthesis.speak(shortPause);
       window.speechSynthesis.speak(utterance);
+    } else {
+      console.log('Text-to-speech não suportado neste navegador.');
     }
   };
 
-  // Calculate total exercise duration in seconds
+  // Calcular a duração total do exercício
   const calculateDuration = () => {
-    // If using executionSteps, calculate from those
     if (hasDetailedExecution && exercise.executionSteps) {
-      return exercise.executionSteps.reduce((total, step) => total + step.duration, 0);
+      return exercise.executionSteps.reduce((total, step) => total + (step.duration || 0), 0);
     }
-    // Otherwise use the specified duration in minutes
-    return parseInt(exercise.duration || '3') * 60;
+    
+    // Se não tiver passos detalhados, usar a duração geral do exercício
+    return parseInt(exercise.duration) * 60 || 300; // 5 minutos padrão
   };
 
-  // Auto navigation mode (completely hands-free)
-  if (showAutoMode) {
-    return (
-      <ExerciseScreen
-        exercise={exercise}
-        onComplete={handleTimerComplete}
-        onBack={() => setShowAutoMode(false)}
-      />
-    );
-  }
-  
-  // Training mode (simplified view)
-  if (showTrainingMode) {
-    return (
-      <div className="fixed inset-0 bg-white flex flex-col">
-        <div className="bg-purple-600 p-4 flex items-center justify-between">
-          <button 
-            onClick={toggleTrainingMode}
-            className="p-2 rounded-full bg-purple-500"
-            aria-label="Sair do modo treino"
-          >
-            <ArrowLeftIcon className="h-5 w-5 text-white" />
-          </button>
-          <h2 className="text-lg font-bold text-white">{exercise.name}</h2>
-          <div className="w-10" /> {/* Spacer to center the title */}
-        </div>
-        
-        <div className="flex-1 flex flex-col items-center justify-center p-6">
-          {exercise.photoUrl ? (
-            <div className="w-64 h-64 rounded-full mb-8 overflow-hidden">
-              <img 
-                src={exercise.photoUrl} 
-                alt={exercise.name} 
-                className="w-full h-full object-cover"
-              />
-            </div>
-          ) : (
-            <div className="w-64 h-64 rounded-full mb-8 overflow-hidden bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
-              <img 
-                src={`https://source.unsplash.com/random/400x400/?yoga,${exercise.category.toLowerCase()},exercise`} 
-                alt={exercise.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          )}
-          
-          <ExerciseTimer 
-            initialDuration={calculateDuration()}
-            onComplete={handleTimerComplete}
-            currentInstruction={hasDetailedExecution && exercise.executionSteps 
-              ? exercise.executionSteps[currentStep]?.instruction
-              : exercise.instructions[currentStep]}
-          />
-          
-          <div className="text-center mb-10 mt-8">
-            <p className="text-xl text-gray-900 mb-3">
-              {hasDetailedExecution && exercise.executionSteps 
-                ? exercise.executionSteps[currentStep]?.instruction
-                : exercise.instructions[currentStep]}
-            </p>
-          </div>
-          
-          <div className="flex justify-center space-x-6">
-            <button
-              onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
-              disabled={currentStep === 0}
-              className="w-14 h-14 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 shadow disabled:opacity-50"
-              aria-label="Passo anterior"
-            >
-              <ArrowLeftIcon className="h-7 w-7" />
-            </button>
-            
-            <button
-              onClick={() => speakInstruction(hasDetailedExecution && exercise.executionSteps 
-                ? exercise.executionSteps[currentStep]?.instruction
-                : exercise.instructions[currentStep])}
-              className="w-14 h-14 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 shadow"
-              aria-label="Ouvir instrução"
-            >
-              <SpeakerWaveIcon className="h-7 w-7" />
-            </button>
-            
-            <button
-              onClick={() => setCurrentStep(prev => Math.min(
-                (hasDetailedExecution && exercise.executionSteps 
-                  ? exercise.executionSteps.length 
-                  : exercise.instructions.length) - 1, 
-                prev + 1
-              ))}
-              disabled={currentStep === (hasDetailedExecution && exercise.executionSteps 
-                ? exercise.executionSteps.length 
-                : exercise.instructions.length) - 1}
-              className="w-14 h-14 bg-purple-100 rounded-full flex items-center justify-center text-purple-700 shadow disabled:opacity-50"
-              aria-label="Próximo passo"
-            >
-              <ChevronRightIcon className="h-7 w-7" />
-            </button>
-          </div>
-        </div>
-        
-        <ConfettiEffect active={showConfetti} />
-      </div>
-    );
-  }
-
-  // Diálogo de confirmação de conclusão
-  const CompletionDialog = () => (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl maxw-sm w-full p-6 shadow-lg">
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckIcon className="w-8 h-8 text-purple-600" />
-          </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">Exercício Finalizado!</h3>
-          <p className="text-gray-600">Você concluiu com sucesso este exercício?</p>
-        </div>
-        
-        <div className="grid grid-cols-1 gap-3">
-          <button 
-            onClick={handleConfirmCompletion}
-            className="w-full py-3 bg-purple-600 text-white rounded-xl font-medium flex items-center justify-center gap-2 transition-colors hover:bg-purple-700"
-          >
-            <CheckIcon className="h-5 w-5" />
-            Sim, concluí
-          </button>
-          
-          <button 
-            onClick={handleRejectCompletion}
-            className="w-full py-3 bg-gray-200 text-gray-800 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors hover:bg-gray-300"
-          >
-            <ArrowPathIcon className="h-5 w-5" />
-            Não, refazer
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Step-by-step mode
-  if (showStepByStepMode) {
-    return (
-      <div className="fixed inset-0 bg-white z-50 flex flex-col">
-        <div className="bg-purple-600 p-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white">{exercise.name}</h2>
-          <button 
-            onClick={toggleStepByStepMode}
-            className="p-2 rounded-full bg-purple-500"
-            aria-label="Fechar modo passo a passo"
-          >
-            <ArrowLeftIcon className="h-6 w-6 text-white" />
-          </button>
-        </div>
-        
-        <div className="flex-1 p-6 flex flex-col items-center justify-center">
-          {exercise.photoUrl ? (
-            <div className="w-48 h-48 rounded-lg mb-6 overflow-hidden">
-              <img 
-                src={exercise.photoUrl} 
-                alt={exercise.name} 
-                className="w-full h-full object-cover"
-              />
-            </div>
-          ) : (
-            <div className="w-48 h-48 rounded-lg mb-6 overflow-hidden bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
-              <img 
-                src={`https://source.unsplash.com/random/300x300/?yoga,${exercise.category.toLowerCase()},exercise`} 
-                alt={exercise.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          )}
-
-          <h3 className="text-2xl font-bold text-gray-900 mb-4 text-center">
-            Passo {currentStep + 1} de {hasDetailedExecution && exercise.executionSteps
-              ? exercise.executionSteps.length
-              : exercise.instructions.length}
-          </h3>
-          
-          <p className="text-xl text-center text-gray-700 mb-8">
-            {hasDetailedExecution && exercise.executionSteps
-              ? exercise.executionSteps[currentStep]?.instruction
-              : exercise.instructions[currentStep]}
-          </p>
-          
-            <div className="mb-8 w-full max-w-sm">
-              <p className="text-center text-gray-600 mb-2">
-              Duração: {stepTimeLeft} segundos
-              </p>
-              <div className="w-full bg-gray-200 rounded-full h-4">
-                <div 
-                  className="h-4 rounded-full bg-purple-600 transition-all duration-500 ease-in-out"
-                style={{ width: `${stepProgress}%` }}
-                />
-              </div>
-            </div>
-        </div>
-            
-        <div className="bg-gray-100 p-4 flex justify-around">
-          <button
-            onClick={() => {
-              if (stepTimerRef.current) {
-                clearInterval(stepTimerRef.current);
-              }
-              setCurrentStep(prev => Math.max(0, prev - 1));
-            }}
-            disabled={currentStep === 0}
-            className="p-3 rounded-full bg-white shadow disabled:opacity-50"
-            aria-label="Passo anterior"
-          >
-            <ArrowLeftIcon className="h-6 w-6 text-purple-700" />
-          </button>
-          
-          <button
-            onClick={() => {
-              // Pausar/Retomar o timer
-              if (isStepRunning) {
-                if (stepTimerRef.current) {
-                  clearInterval(stepTimerRef.current);
-                }
-                setIsStepRunning(false);
-              } else {
-                startStepTimer();
-              }
-            }}
-            className="p-3 rounded-full bg-white shadow"
-            aria-label={isStepRunning ? "Pausar" : "Iniciar"}
-          >
-            {isStepRunning ? (
-              <PauseIcon className="h-6 w-6 text-purple-700" />
-            ) : (
-              <PlayIcon className="h-6 w-6 text-purple-700" />
-            )}
-          </button>
-              
-          <button
-            onClick={() => {
-              if (stepTimerRef.current) {
-                clearInterval(stepTimerRef.current);
-              }
-              const totalSteps = hasDetailedExecution && exercise.executionSteps 
-                ? exercise.executionSteps.length 
-                : exercise.instructions.length;
-              
-              if (currentStep < totalSteps - 1) {
-                setCurrentStep(prev => prev + 1);
-              }
-            }}
-            disabled={currentStep === (hasDetailedExecution && exercise.executionSteps 
-              ? exercise.executionSteps.length 
-              : exercise.instructions.length) - 1}
-            className="p-3 rounded-full bg-white shadow disabled:opacity-50"
-            aria-label="Próximo passo"
-          >
-            <ChevronRightIcon className="h-6 w-6 text-purple-700" />
-          </button>
-        </div>
-        
-        {/* Adicionar o diálogo de conclusão */}
-        {showCompletionDialog && <CompletionDialog />}
-        
-        {/* Confetti effect */}
-        <ConfettiEffect active={showConfetti} />
-      </div>
-    );
-  }
-
-  // Main exercise detail view
+  // Componente principal de tela
   return (
-    <div className="min-h-screen bg-white pb-20">
-      <Header 
-        user={user}
-        onProfileClick={onProfileClick}
-        title={exercise.name}
-        showBackButton
-        onBackClick={onBack}
-      />
-
-      <div className="px-4 max-w-md mx-auto">
-        {/* Exercise Photo or Video */}
-        {exercise.isVideoExercise && exercise.videoUrl ? (
-          <YouTubeEmbed videoUrl={exercise.videoUrl} />
-        ) : (
-        <div className="aspect-video overflow-hidden rounded-2xl mb-4 bg-gray-100 flex items-center justify-center relative">
-          {exercise.photoUrl ? (
-            <img 
-              src={exercise.photoUrl} 
-              alt={`Demonstração de ${exercise.name}`} 
-              className="w-full h-full object-cover"
-            />
+    <ErrorBoundary>
+      <div className="bg-white flex flex-col min-h-screen">
+        <Header 
+          title="Detalhes do Exercício" 
+          leftIcon={<ArrowLeftIcon className="h-6 w-6" />} 
+          onLeftIconClick={onBack}
+          rightIcon={user?.photo ? (
+            <img src={user.photo} alt={user.name} className="h-8 w-8 rounded-full object-cover" />
           ) : (
-            <img 
-              src={`https://source.unsplash.com/random/800x600/?yoga,${exercise.category.toLowerCase()},exercise`} 
-              alt={`Demonstração de ${exercise.name}`}
-              className="w-full h-full object-cover"
-            />
+            <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
+              {user?.name?.charAt(0) || 'U'}
+            </div>
           )}
-
-          {/* Badges overlay */}
-          <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2">
-            <span className="px-2 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-medium text-gray-700 shadow-sm flex items-center">
-              <ClockIcon className="h-3 w-3 mr-1" />
-              {exercise.duration} minutos
-            </span>
-            <span className="px-2 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-medium text-gray-700 shadow-sm flex items-center">
-              {exercise.difficulty === 'Fácil' ? 
-                <span className="h-2 w-2 bg-green-500 rounded-full mr-1"></span> : 
-                <span className="h-2 w-2 bg-orange-500 rounded-full mr-1"></span>
-              } 
-              {exercise.difficulty}
-            </span>
-            <span className="px-2 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-medium text-gray-700 shadow-sm flex items-center">
-              <span className="mr-1 text-purple-500">
-                {getCategoryIconComponent(categoryIconType)}
-              </span>
-              {exercise.category}
-            </span>
-          </div>
-        </div>
-        )}
-          
-        {/* Informação do vídeo, se aplicável */}
-        {exercise.isVideoExercise && exercise.videoAuthor && (
-          <div className="mb-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
-            <div className="flex items-start">
-              <div className="flex-1">
-                <h3 className="font-medium text-gray-900">Vídeo por: {exercise.videoAuthor}</h3>
-                {exercise.videoDescription && (
-                  <p className="text-sm text-gray-600 mt-1">{exercise.videoDescription}</p>
-                )}
+          onRightIconClick={onProfileClick}
+        />
+        
+        <div className="flex-1 overflow-auto p-4 pb-20">
+          <div className="flex items-start mb-4 gap-4">
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold mb-1">{exercise.name}</h1>
+              <div className="flex items-center mb-3">
+                <div 
+                  className="px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1 mr-2"
+                  style={{ backgroundColor: `${categoryColor}20`, color: categoryColor }}
+                >
+                  {getCategoryIconComponent(categoryIconType)}
+                  {exercise.category}
+                </div>
+                <div className="flex items-center text-gray-500 text-xs gap-3">
+                  <span className="flex items-center gap-1">
+                    <ClockIcon className="h-3 w-3" />
+                    {exercise.duration} min
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <BoltIcon className="h-3 w-3" />
+                    {exercise.difficulty}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-          
-        {/* Timer Card - Removendo shadow */}
-        <Card 
-          variant="default" 
-          size="md" 
-          className="mb-4 shadow-none" 
-          style={{ boxShadow: 'none !important' }}
-        >
-          <CardContent className="pt-6">
-            <ExerciseTimer 
-              initialDuration={calculateDuration()}
-              onComplete={handleTimerComplete}
-              currentInstruction={hasDetailedExecution && exercise.executionSteps 
-                ? exercise.executionSteps[currentStep]?.instruction
-                : exercise.instructions[currentStep]}
-            />
             
             {completed && (
-              <div className="mt-4 bg-green-100 text-green-800 px-4 py-3 rounded-lg flex items-center justify-center">
-                <CheckIcon className="h-5 w-5 mr-2" />
-                <span className="font-medium">Parabéns! Você investiu em si mesma!</span>
+              <div className="bg-green-100 text-green-800 rounded-full p-2 flex-shrink-0">
+                <CheckIcon className="h-6 w-6" />
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* For What Purpose section */}
-        <Card variant="default" size="md" className="mb-4">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <FiTarget className="h-5 w-5 mr-2 text-purple-600" />
-              PARA QUE SERVE:
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
-              {exercise.purposePoints?.map((point, index) => (
-                <li key={index} className="flex items-start">
-                  <span className="text-purple-600 mr-2">•</span>
-                  <p className="text-gray-700">{point}</p>
-                </li>
-              )) || (
-                <>
-                  <li className="flex items-start">
-                    <span className="text-purple-600 mr-2">•</span>
-                    <p className="text-gray-700">Reduz tensão na nuca e pescoço</p>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-purple-600 mr-2">•</span>
-                    <p className="text-gray-700">Alivia dor de cabeça</p>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-purple-600 mr-2">•</span>
-                    <p className="text-gray-700">Melhora circulação cerebral</p>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-purple-600 mr-2">•</span>
-                    <p className="text-gray-700">Diminui ansiedade</p>
-                  </li>
-                </>
-              )}
-            </ul>
-          </CardContent>
-        </Card>
-
-        {/* Execution Steps */}
-        {hasDetailedExecution && (
-          <Card variant="default" size="md" className="mb-4">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <FiList className="h-5 w-5 mr-2 text-purple-600" />
-                EXECUÇÃO PASSO A PASSO:
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div ref={stepsRef} className="space-y-4">
-                {exercise.executionSteps?.map((step, index) => (
+          </div>
+          
+          {/* Vídeo do exercício (se disponível) */}
+          {exercise.isVideoExercise && exercise.videoUrl && (
+            <div className="relative rounded-2xl overflow-hidden">
+              <VideoEmbed videoUrl={exercise.videoUrl} />
+              
+              {/* Badge informativa */}
+              <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white rounded-full px-3 py-1 text-xs font-medium flex items-center gap-1 z-30">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" />
+                </svg>
+                Demonstração em vídeo
+              </div>
+            </div>
+          )}
+          
+          {/* Imagem do exercício (se disponível e não for vídeo) */}
+          {!exercise.isVideoExercise && exercise.photoUrl && (
+            <div className="aspect-video w-full rounded-2xl mb-4 overflow-hidden bg-gray-100 flex items-center justify-center">
+              <img 
+                src={exercise.photoUrl} 
+                alt={exercise.name} 
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            </div>
+          )}
+          
+          {/* Modo Passo a Passo (exibido como uma tela flutuante) */}
+          {showStepByStepMode && (
+            <StepByStepGuide 
+              exercise={exercise}
+              onExit={() => setShowStepByStepMode(false)}
+              onComplete={handleTimerComplete}
+            />
+          )}
+          
+          {/* Descrição do exercício */}
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold mb-2">Descrição</h2>
+            <p className="text-gray-700">{exercise.description}</p>
+          </div>
+          
+          {/* Benefícios */}
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold mb-2 flex items-center gap-2">
+              <FiAward className="h-5 w-5 text-purple-600" />
+              Benefícios
+            </h2>
+            <p className="text-gray-700 mb-3">{exercise.benefits}</p>
+            
+            {exercise.purposePoints && exercise.purposePoints.length > 0 && (
+              <div className="bg-purple-50 rounded-lg p-4">
+                <ul className="space-y-2">
+                  {exercise.purposePoints.map((point, index) => (
+                    <li key={index} className="flex items-start gap-2">
+                      <CheckIcon className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+          
+          {/* Instruções passo a passo */}
+          <div className="mb-6" ref={stepsRef}>
+            <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
+              <FiList className="h-5 w-5 text-purple-600" />
+              Instruções Passo a Passo
+            </h2>
+            
+            <div className="space-y-4">
+              {hasDetailedExecution && exercise.executionSteps ? (
+                exercise.executionSteps.map((step, index) => (
                   <div 
                     key={index} 
-                    className={`p-3 rounded-lg border ${
-                      currentStep === index 
-                        ? 'border-purple-300 bg-purple-50' 
-                        : 'border-gray-200'
-                    } step-${index}`}
+                    id={`step-${index}`}
+                    className={`p-4 rounded-lg border-l-4 transition-all duration-300 ${
+                      currentStep === index ? 'border-purple-600 bg-purple-50 shadow-sm' : 'border-gray-200 bg-gray-50'
+                    }`}
+                    onClick={() => {
+                      playTap();
+                      setCurrentStep(index);
+                    }}
                   >
-                    <div className="flex items-center mb-2">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-2 ${
-                        currentStep === index 
-                          ? 'bg-purple-600 text-white' 
-                          : 'bg-gray-200 text-gray-700'
+                    <div className="flex items-start gap-3">
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+                        currentStep === index ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700'
                       }`}>
                         {index + 1}
                       </div>
-                      <p className="font-medium text-gray-900">{step.instruction}</p>
-                    </div>
-                    <p className="text-sm text-gray-600 ml-8">
-                      Duração: {step.duration} segundos
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Precautions section */}
-        <Card variant="default" size="md" className="mb-4">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <FiAlertTriangle className="h-5 w-5 mr-2 text-yellow-500" />
-              CUIDADOS:
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
-              {exercise.cautions?.map((caution, index) => (
-                <li key={index} className="flex items-start">
-                  <span className="text-yellow-600 mr-2">•</span>
-                  <p className="text-gray-700">{caution}</p>
-                </li>
-              )) || (
-                <>
-                  <li className="flex items-start">
-                    <span className="text-yellow-600 mr-2">•</span>
-                    <p className="text-gray-700">Não force a respiração</p>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-yellow-600 mr-2">•</span>
-                    <p className="text-gray-700">Se ficar tonta, respire normal</p>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-yellow-600 mr-2">•</span>
-                    <p className="text-gray-700">Pare se sentir desconforto</p>
-                  </li>
-                </>
-              )}
-            </ul>
-
-            {exercise.hasWarning && (
-              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-700 text-sm font-medium flex items-start">
-                  <InformationCircleIcon className="h-5 w-5 mr-2 flex-shrink-0" />
-                  {exercise.warningText || "Este exercício requer atenção especial. Consulte seu médico se tiver dúvidas."}
-                </p>
-              </div>
-            )}
-            
-            {exercise.specialTip && (
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <h4 className="font-medium text-blue-700 mb-1 flex items-center">
-                  <LightBulbIcon className="h-5 w-5 mr-2" />
-                  DICA ESPECIAL:
-                </h4>
-                <p className="text-gray-700 text-sm">{exercise.specialTip}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Scientific Data Section */}
-        {exercise.scientificData && (
-          <Card variant="default" size="md" className="mb-4">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <BeakerIcon className="h-5 w-5 mr-2 text-purple-600" />
-                BASE CIENTÍFICA:
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Músculos Alvo:</h4>
-                  <div className="flex flex-wrap gap-1">
-                    {exercise.scientificData.targetMuscles.map((muscle, idx) => (
-                      <span key={idx} className="text-xs px-2 py-1 bg-purple-50 text-purple-700 rounded-full">
-                        {muscle}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Fundamentação Científica:</h4>
-                  <ul className="space-y-1">
-                    {exercise.scientificData.scientificBasis.map((basis, idx) => (
-                      <li key={idx} className="flex items-start">
-                        <span className="text-blue-600 mr-2">•</span>
-                        <p className="text-gray-700 text-sm">{basis}</p>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Resultados Esperados:</h4>
-                  <ul className="space-y-1">
-                    {exercise.scientificData.expectedResults.map((result, idx) => (
-                      <li key={idx} className="flex items-start">
-                        <span className="text-green-600 mr-2">•</span>
-                        <p className="text-gray-700 text-sm">{result}</p>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                
-                {exercise.scientificData.contraindicatedFor && exercise.scientificData.contraindicatedFor.length > 0 && (
-                  <div className="mt-2 p-3 bg-red-50 border border-red-100 rounded-lg">
-                    <h4 className="font-medium text-red-800 mb-1 flex items-center">
-                      <ShieldExclamationIcon className="h-5 w-5 mr-2" />
-                      CONTRAINDICADO PARA:
-                    </h4>
-                    <ul className="space-y-1 mt-2">
-                      {exercise.scientificData.contraindicatedFor.map((condition, idx) => (
-                        <li key={idx} className="flex items-start">
-                          <span className="text-red-600 mr-2">•</span>
-                          <p className="text-gray-700 text-sm">{condition}</p>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                
-                {exercise.scientificData.adaptations && Object.keys(exercise.scientificData.adaptations).length > 0 && (
-                  <div className="mt-4">
-                    <h4 className="font-medium text-gray-900 mb-2 flex items-center">
-                      <AdjustmentsHorizontalIcon className="h-5 w-5 mr-1 text-blue-600" />
-                      Adaptações para condições específicas:
-                    </h4>
-                    <div className="space-y-3">
-                      {Object.entries(exercise.scientificData.adaptations).map(([condition, adaptation], idx) => (
-                        <div key={idx} className="border-b border-gray-100 pb-2 last:border-0 last:pb-0">
-                          <h5 className="font-medium text-gray-800 mb-1">{condition}:</h5>
-                          <p className="text-gray-600 text-sm">{adaptation}</p>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-medium">{step.title || `Passo ${index + 1}`}</h3>
+                          <span className="text-sm text-gray-500 flex items-center gap-1">
+                            <ClockIcon className="h-4 w-4" />
+                            {step.duration || 15}s
+                          </span>
                         </div>
-                      ))}
+                        <p className="text-gray-700">{step.instruction}</p>
+                      </div>
                     </div>
                   </div>
-                )}
+                ))
+              ) : (
+                exercise.instructions.map((instruction, index) => (
+                  <div 
+                    key={index} 
+                    id={`step-${index}`}
+                    className={`p-4 rounded-lg border-l-4 transition-all duration-300 ${
+                      currentStep === index ? 'border-purple-600 bg-purple-50 shadow-sm' : 'border-gray-200 bg-gray-50'
+                    }`}
+                    onClick={() => {
+                      playTap();
+                      setCurrentStep(index);
+                    }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+                        currentStep === index ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700'
+                      }`}>
+                        {index + 1}
+                      </div>
+                      <p className="text-gray-700">{instruction}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+          
+          {/* Dicas e Informações Adicionais */}
+          {exercise.tips && exercise.tips.length > 0 && (
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
+                <LightBulbIcon className="h-5 w-5 text-purple-600" />
+                Dicas
+              </h2>
+              <div className="bg-yellow-50 rounded-lg p-4">
+                <ul className="space-y-2">
+                  {exercise.tips.map((tip, index) => (
+                    <li key={index} className="flex items-start gap-2">
+                      <div className="h-5 w-5 text-yellow-600 flex-shrink-0 flex items-center justify-center font-bold">
+                        {index + 1}.
+                      </div>
+                      <span>{tip}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Action Buttons - Remover botão de RESULTADOS */}
-        <div className="flex mb-8">
-          {!completed ? (
-            <button
-              onClick={handleComplete}
-              className="w-full py-3 bg-purple-600 text-white rounded-xl font-medium flex items-center justify-center gap-2 transition-colors"
-              aria-label="Marcar exercício como concluído"
-            >
-              <CheckIcon className="h-5 w-5" />
-              CONCLUIR EXERCÍCIO
-            </button>
-          ) : (
-            <button
-              className="w-full py-3 bg-green-600 text-white rounded-xl font-medium flex items-center justify-center gap-2 cursor-default"
-              disabled
-            >
-              <FiCheckCircle className="h-5 w-5" />
-              EXERCÍCIO CONCLUÍDO
-            </button>
+            </div>
+          )}
+          
+          {/* Precauções */}
+          {exercise.precautions && exercise.precautions.length > 0 && (
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
+                <ShieldExclamationIcon className="h-5 w-5 text-purple-600" />
+                Precauções
+              </h2>
+              <div className="bg-red-50 rounded-lg p-4">
+                <ul className="space-y-2">
+                  {exercise.precautions.map((precaution, index) => (
+                    <li key={index} className="flex items-start gap-2">
+                      <FiAlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <span>{precaution}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+          
+          {/* Informações sobre o vídeo */}
+          {exercise.isVideoExercise && exercise.videoAuthor && (
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
+                <InformationCircleIcon className="h-5 w-5 text-purple-600" />
+                Informações do Vídeo
+              </h2>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="mb-2"><strong>Autor:</strong> {exercise.videoAuthor}</p>
+                {exercise.videoSource && (
+                  <p className="mb-2"><strong>Fonte:</strong> {exercise.videoSource}</p>
+                )}
+                {exercise.videoDescription && (
+                  <p><strong>Descrição:</strong> {exercise.videoDescription}</p>
+                )}
+                <div className="mt-3 text-xs text-gray-500">
+                  <p>Este vídeo foi adaptado para melhor experiência educacional, sem fins comerciais.</p>
+                </div>
+              </div>
+            </div>
           )}
         </div>
+        
+        {/* Barra de ações fixa no rodapé */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex items-center justify-between backdrop-blur-sm bg-white/90">
+          <div className="flex gap-2">
+            <button 
+              onClick={() => {
+                playTap();
+                setSoundEnabled(prev => !prev);
+              }}
+              className="p-2 rounded-full bg-gray-100 transition-colors hover:bg-gray-200"
+              aria-label={soundEnabled ? "Desativar som" : "Ativar som"}
+            >
+              {soundEnabled ? (
+                <SpeakerWaveIcon className="h-6 w-6 text-gray-700" />
+              ) : (
+                <SpeakerXMarkIcon className="h-6 w-6 text-gray-700" />
+              )}
+            </button>
+          </div>
+          
+          <div className="flex gap-2">
+            <button
+              onClick={handleStepByStepMode}
+              className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-colors ${
+                showStepByStepMode 
+                  ? 'bg-purple-600 text-white' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+              aria-label="Iniciar modo passo a passo"
+            >
+              <ChevronRightIcon className="h-4 w-4" />
+              Passo a Passo
+            </button>
+            
+            <button
+              onClick={completed ? () => {
+                playTap();
+                setCompleted(false);
+              } : handleComplete}
+              className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-colors ${
+                completed
+                  ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : 'bg-purple-600 text-white hover:bg-purple-700'
+              }`}
+              aria-label={completed ? "Refazer exercício" : "Concluir exercício"}
+            >
+              {completed ? (
+                <>
+                  <ArrowPathIcon className="h-4 w-4" />
+                  Refazer
+                </>
+              ) : (
+                <>
+                  <CheckIcon className="h-4 w-4" />
+                  Concluir
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+        
+        {/* Diálogo de confirmação de conclusão */}
+        {showCompletionDialog && (
+          <CompletionDialog
+            onConfirm={handleConfirmCompletion}
+            onReject={handleRejectCompletion}
+          />
+        )}
+        
+        {/* Efeito de confetti para celebrar a conclusão */}
+        {showConfetti && <ConfettiEffect />}
       </div>
-
-      {/* Adicionar o diálogo de conclusão */}
-      {showCompletionDialog && <CompletionDialog />}
-
-      {/* Confetti Effect */}
-      <ConfettiEffect active={showConfetti} />
-    </div>
+    </ErrorBoundary>
   );
 };
 

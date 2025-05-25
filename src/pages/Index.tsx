@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { User, UserProgress, UserQuizData, Exercise } from "@/types";
+import { User, UserProgress, Exercise } from "@/types";
 import Navigation from "@/components/Navigation";
 import Dashboard from "@/components/Dashboard";
 import ProgramCalendar from "@/components/ProgramCalendar";
@@ -7,15 +7,13 @@ import ExerciseLibrary from "@/components/ExerciseLibrary";
 import ExerciseDetail from "@/components/ExerciseDetail";
 import MeditationLibrary from "@/components/MeditationLibrary";
 import ProfileScreen from "@/components/ProfileScreen";
-import MedicalQuiz from "@/components/MedicalQuiz";
-import MedicalDisclaimer from "@/components/MedicalDisclaimer";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { exercises } from "@/data/exercises";
 import allExercises from "@/data/allScientificExercises";
 import videoExercises from "@/data/videoExercises";
 import RecipeLibrary from "@/components/RecipeLibrary";
 
-type View = 'dashboard' | 'program' | 'exercises' | 'exercise-detail' | 'meditation' | 'profile' | 'quiz' | 'disclaimer' | 'nutrition';
+type View = 'dashboard' | 'program' | 'exercises' | 'exercise-detail' | 'meditation' | 'profile' | 'nutrition';
 
 // Default user for all
 const defaultUser: User = {
@@ -56,8 +54,6 @@ const Index = () => {
   const [userProgress, setUserProgress] = useState<UserProgress>(defaultProgress);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [dataLoaded, setDataLoaded] = useState(false);
-  const [showDisclaimer, setShowDisclaimer] = useState(false);
-  const [disclaimerRedirect, setDisclaimerRedirect] = useState<View | null>(null);
 
   // Load data safely from localStorage
   const safelyLoadData = useCallback(<T,>(key: string, defaultValue: T): T => {
@@ -114,7 +110,15 @@ const Index = () => {
       
       // Check if it's the first time opening the app
       if (!savedUser.onboardingCompleted) {
-        setCurrentView('quiz');
+        // Ir direto para o dashboard em vez do disclaimer
+        setCurrentUser(prev => ({
+          ...prev,
+          disclaimerAccepted: true,
+          tutorialCompleted: true,
+          onboardingCompleted: true,
+          quizCompleted: true
+        }));
+        setCurrentView('dashboard');
       }
       
       setDataLoaded(true);
@@ -168,35 +172,18 @@ const Index = () => {
     checkStreak();
   }, [userProgress.lastActive, dataLoaded]);
 
-  const handleCompleteQuiz = (quizData: UserQuizData) => {
-    // Update user data with quiz information
+  const handleCompleteQuiz = () => {
+    // Configurar o usuário com valores padrão em vez de usar dados do quiz
     setCurrentUser(prev => ({
       ...prev,
-      age: quizData.age,
-      medicalConditions: quizData.healthConditions,
-      painAreas: quizData.painAreas,
-      availableTime: quizData.availableTime,
-      quizCompleted: true
-    }));
-    
-    // Move to disclaimer step
-    setCurrentView('disclaimer');
-  };
-
-  const handleDisclaimerAccept = () => {
-    setCurrentUser(prev => ({
-      ...prev,
+      quizCompleted: true,
       disclaimerAccepted: true,
       tutorialCompleted: true,
       onboardingCompleted: true
     }));
     
+    // Move to dashboard step
     setCurrentView('dashboard');
-  };
-
-  const handleDisclaimerSupport = () => {
-    // In a real app, this would open a support chat or contact form
-    alert('Suporte não disponível nesta versão de demonstração.');
   };
 
   const handleUpdateUser = (userData: User) => {
@@ -216,17 +203,17 @@ const Index = () => {
     setUserProgress(defaultProgress);
     setCurrentUser({
       ...defaultUser,
-      onboardingCompleted: false,
-      quizCompleted: false,
-      disclaimerAccepted: false,
-      tutorialCompleted: false
+      onboardingCompleted: true,
+      quizCompleted: true,
+      disclaimerAccepted: true,
+      tutorialCompleted: true
     });
     
     localStorage.removeItem(STORAGE_KEYS.USER);
     localStorage.removeItem(STORAGE_KEYS.PROGRESS);
     
-    // Restart onboarding
-    setCurrentView('quiz');
+    // Ir direto para o dashboard
+    setCurrentView('dashboard');
   };
 
   const handleExerciseComplete = (exerciseId: number) => {
@@ -258,12 +245,7 @@ const Index = () => {
   const handleTabChange = (tab: View) => {
     if (tab === 'exercise-detail') return; // Ignore direct navigation to exercise detail
     
-    if (showDisclaimer && tab !== 'disclaimer' && tab !== 'profile') {
-      setDisclaimerRedirect(tab);
-      setCurrentView('disclaimer');
-    } else {
-      setCurrentView(tab);
-    }
+    setCurrentView(tab);
   };
 
   const handleExerciseSelect = (exercise: Exercise) => {
@@ -278,23 +260,7 @@ const Index = () => {
   // Combinar todos os exercícios para passar para o ExerciseLibrary
   const allAvailableExercises = [...exercises, ...allExercises];
 
-  // Show onboarding flows if needed
-  if (currentView === 'quiz') {
-    return (
-      <ErrorBoundary fallback={<div>Erro ao carregar questionário. Por favor reinicie o app.</div>}>
-        <MedicalQuiz onComplete={handleCompleteQuiz} userName={currentUser.name} />
-      </ErrorBoundary>
-    );
-  }
-
-  if (currentView === 'disclaimer') {
-    return (
-      <ErrorBoundary fallback={<div>Erro ao carregar disclaimer. Por favor reinicie o app.</div>}>
-        <MedicalDisclaimer onAccept={handleDisclaimerAccept} onSupport={handleDisclaimerSupport} />
-      </ErrorBoundary>
-    );
-  }
-
+  // Handle onboarding flow
   if (!dataLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
